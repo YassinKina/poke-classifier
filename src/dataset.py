@@ -1,32 +1,39 @@
 from torch.utils.data import Dataset
 import torch
 import numpy as np
+from torchvision import transforms
+from datasets import load_from_disk
 
 
 class PokemonDataset(Dataset):
-    def __init__(self, hf_dataset, transform=None):
+    def __init__(self, dataset_split, transform=None):
         """
          Args:
-            hf_dataset: The loaded Hugging Face dataset object.
+            dataset_path: Path to the Pokemon images.
             transform: PyTorch transforms (augmentation/normalization).
         """
-        self.hf_dataset = hf_dataset
+        # self.dataset_path = dataset_path
         self.transform = transform
+        
+        self.dataset = dataset_split
+        self.labels = self.load_labels(self.dataset)
 
     def __len__(self):
        # Returns number of images in the dataset
-        return len(self.hf_dataset)
+        return len(self.dataset)
 
-    def __getitem(self, idx):
+    def __getitem__(self, idx):
         """
         Args:
             idx: The index of the item to return.
         Returns:
             A tuple (image, label)
         """
-        item = self.hf_dataset[idx]
+        
+        item = self.retrieve_image(idx)
+        
         image = item['image']
-        label = item['label']
+        label = item['labels']
 
         # Make sure image is RGB
         if image.mode != 'RGB':
@@ -37,5 +44,31 @@ class PokemonDataset(Dataset):
             image = self.transform(image)
 
         return image, label
+    
+    def retrieve_image(self, idx):
+        """
+        Loads a single image from disk based on its index.
+
+        Args:
+            idx (int): The index of the image to load.
+
+        Returns:
+            PIL.Image.Image: The loaded image, converted to RGB.
+        """
+        return self.dataset[idx]
+        
+    def load_labels(self, dataset):
+        """Loads dataset labels for PokemonDataset
+
+        Returns:
+            _type_: _description_
+        """
+        labels = dataset["labels"]
+        return labels
+        
+    
+   
+    
+        
 
 

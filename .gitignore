@@ -2,3 +2,5 @@ data/
 .cache/
 __pycache__/
 *.pth
+temp_images/
+.idea/
