@@ -1,6 +1,6 @@
 import os
 import torch
-from datasets import load_dataset, load_from_disk, DatasetDict
+from datasets import load_dataset, load_from_disk, DatasetDict, concatenate_datasets
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,41 +12,41 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from src.utils import get_mean_and_std
+import glob
 
-def download_dataset():
+def download_dataset(raw_path,):
     """Download the pokemon dataaset if it doesn't exist."""
 
-    data_path = "../data"
-    os.makedirs(data_path, exist_ok=True)
-
-    # Check if dataset exists locally
-    if os.path.exists(os.path.join(data_path, "fcakyon___pokemon-classification")):
-        print(f"The pokemon dataset is already downloaded. Loading locally from {data_path}")
-
-
-        return
+   
+    os.makedirs(raw_path, exist_ok=True)
 
     print("Downloading pokemon dataset...")
 
     # Download dataset from HF
-    ds = load_dataset("fcakyon/pokemon-classification", cache_dir=data_path, revision="refs/convert/parquet")
+    ds = load_dataset("fcakyon/pokemon-classification", cache_dir=raw_path, revision="refs/convert/parquet")
 
     return
 
 def load_local_data():
+    # Use the root of your data directory
+    base_search_path = "./data/fcakyon___pokemon-classification"
+    
+    # Look for any .arrow files recursively within that folder
+    # This ignores the 'c07895...' hash folder level entirely
+    arrow_files = glob.glob(os.path.join(base_search_path, "**/*.arrow"), recursive=True)
+    
+    # Map them to splits
+    data_files = {}
+    for f in arrow_files:
+        if "train" in f: data_files["train"] = f
+        elif "validation" in f or "valid" in f: data_files["validation"] = f
+        elif "test" in f: data_files["test"] = f
 
-    base_path = "../data/fcakyon___pokemon-classification/default/0.0.0/c07895408e16b7f50c16d7fb8abbcae470621248"
+    if not data_files:
+        raise FileNotFoundError(f"No .arrow files found in {base_search_path}. Check if the download actually completed.")
 
-    # Point to the specific files because they are all in one directory
-    data_files = {
-        "train": os.path.join(base_path, "pokemon-classification-train.arrow"),
-        "validation": os.path.join(base_path, "pokemon-classification-validation.arrow"),
-        "test": os.path.join(base_path, "pokemon-classification-test.arrow")
-    }
-
-    # Load via the arrow builder
-    ds = load_dataset("arrow", data_files=data_files)
-    return ds
+    print(f"Found local data files: {list(data_files.keys())}")
+    return load_dataset("arrow", data_files=data_files)
 
 def view_dataset(ds, split="train", idx=None):
     # Get the total number of images in the split
@@ -74,48 +74,60 @@ def view_dataset(ds, split="train", idx=None):
     plt.axis('off')
     plt.show()
 
-def sanitize_dataset(ds_full):
-    """Removes augmented images from raw dataset and returns dataset of all unaugmented images
-
-    Args:
-        ds_full (_type_): dataset of raw augmented and orginal images
-
-    Returns:
-        _type_: dataset of only unaugmented images
-    """
-    # Temporary folder to store images for the dedupper to read
-    temp_dir = "./temp_images"
+def sanitize_dataset(save_path):
+    # 1. Load the existing arrow files (which currently have duplicates)
+    ds_full_dict = load_local_data()
+    
+    # 2. Flatten into one single Dataset
+    print("Combining all splits for global deduplication...")
+    combined_ds = concatenate_datasets([
+        ds_full_dict["train"], 
+        ds_full_dict["validation"], 
+        ds_full_dict["test"]
+    ])
+    
+    # 3. Export images to one temp folder for the CNN
+    temp_dir = "./data/temp_images_global"
     os.makedirs(temp_dir, exist_ok=True)
-
-    print("Exporting images for deep analysis...")
-    for idx, example in enumerate(ds_full):
-        # Save each image with its index as the name
+    
+    for idx, example in enumerate(combined_ds):
         example['image'].save(f"{temp_dir}/{idx}.jpg")
 
-    # Use a Pre-trained CNN to find augmentations
-    cnn = CNN()
-
-    # This finds all images that are more than 90% similar (covers flips/rotations)
+    # 4. Use CNN to find duplicates globally
+    cnn = CNN() 
     duplicates = cnn.find_duplicates(image_dir=temp_dir, min_similarity_threshold=0.9)
 
-    # Filter similar, augmented images out
+    # 5. Identify unique indices
     seen_indices = set()
     unique_indices = []
-
-    for img_name, dupe_list in duplicates.items():
+    for img_name, dupe_list in sorted(duplicates.items(), key=lambda x: int(x[0].split('.')[0])):
         idx = int(img_name.split('.')[0])
         if idx not in seen_indices:
             unique_indices.append(idx)
             seen_indices.add(idx)
-            # Mark all its augmented "siblings" as seen so they are skipped
             for dupe_name in dupe_list:
-                dupe_idx = int(dupe_name.split('.')[0])
-                seen_indices.add(dupe_idx)
+                seen_indices.add(int(dupe_name.split('.')[0]))
 
-    print(f"Found {len(unique_indices)} unique 'Parent' images out of {len(ds_full)} total.")
+    unique_ds = combined_ds.select(unique_indices)
+    print(f"Global deduplication complete: {len(unique_ds)} unique images remaining.")
 
+    # 6. Re-split into 80/10/10 (Stratified)
+    # First split: Train (80%) and Temp (20%)
+    train_temp = unique_ds.train_test_split(test_size=0.2, seed=42, stratify_by_column="labels")
     
-    return ds_full.select(unique_indices)
+    # Second split: Divide Temp into Val (50% of temp) and Test (50% of temp)
+    val_test = train_temp["test"].train_test_split(test_size=0.5, seed=42, stratify_by_column="labels")
+
+    final_ds = DatasetDict({
+        "train": train_temp["train"],
+        "validation": val_test["train"],
+        "test": val_test["test"]
+    })
+
+    final_ds.save_to_disk(save_path)
+    print(f"Cleaned and re-stratified dataset saved at {save_path}")
+    return final_ds
+
 
 def save_dataset_locally(dataset):
     
@@ -136,25 +148,27 @@ def save_dataset_locally(dataset):
     dataset.save_to_disk(folder_path)
     print("Save complete!")
 
-def split_dataset(data_path="./data/pokemon_clean"):
-    # Load the master sanitized dataset
-    ds = load_from_disk(data_path)
+def split_dataset(cleaned_path="data/pokemon_clean"):
+    ds =  None
+    raw_path = "data/fcakyon___pokemon-classification"
+    # Create cleaned dataset with balanced labels representation
+    if not os.path.exists(cleaned_path):
+        if not os.path.exists(raw_path):
+            print("Raw dataset not found. Downloading data")
+            download_dataset(raw_path)
+            
+        print("Clean dataset not found. Running sanitization script...")
+        ds = sanitize_dataset(save_path="data/pokemon_clean")
+    else:
+        # Load the master sanitized dataset
+        print(f"Loading cleaned data from {cleaned_path}")
+        ds = load_from_disk(cleaned_path)
+        
+    # If we already have a DatasetDict, return
+    print(f"Final Counts -> Train: {len(ds['train'])}, Val: {len(ds['validation'])}, Test: {len(ds['test'])}")
+    return ds
     
-    # First split: 80% Train, 20% (Val + Test) with every pokemon in each split
-    train_test_split = ds.train_test_split(test_size=0.2, seed=42, stratify_by_column="labels")
-    
-    # Second split: 10% val, 10% test
-    test_val_split = train_test_split['test'].train_test_split(test_size=0.5, seed=42, stratify_by_column="labels")
-    
-    final_ds = DatasetDict({
-        'train': train_test_split['train'],
-        'validation': test_val_split['train'], 
-        'test': test_val_split['test']        
-    })
-    
-    print(f"Final Counts -> Train: {len(final_ds['train'])}, Val: {len(final_ds['validation'])}, Test: {len(final_ds['test'])}")
-    return final_ds
-
+  
 def get_train_test_transforms(mean, std):
         """
         Creates and returns a composition of image transformations for data augmentation
@@ -179,12 +193,18 @@ def get_train_test_transforms(mean, std):
         ]
         
         augmentations_transforms = [
-        # Randomly flip the image horizontally with a 50% probability.
+      
+            transforms.RandomResizedCrop(224, scale=(0.8, 1.0)),
+            
             transforms.RandomHorizontalFlip(p=0.5),
-            # Randomly rotate the image within a range of +/- 10 degrees.
-            transforms.RandomRotation(degrees=10),
-            # Randomly adjust the brightness of the image.
-            transforms.ColorJitter(brightness=0.2),
+            
+            transforms.RandomRotation(degrees=20),
+            
+            # Add contrast and saturation to ColorJitter
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+            
+            # Randomly turn the image grayscale (5% of the time)
+            transforms.RandomGrayscale(p=0.05),
         ]
         
         main_transforms = [
@@ -199,7 +219,7 @@ def get_train_test_transforms(mean, std):
         
         return transforms_train, transforms_test
 
-def create_dataloaders(data_path, batch_size=64, ):
+def create_dataloaders(clean_data_path, batch_size=64, ):
     """ Creates train, val, and test DataLoaders 
 
     Args:
@@ -211,7 +231,7 @@ def create_dataloaders(data_path, batch_size=64, ):
     """
     from src.dataset import PokemonDataset
     # Saved dataset is unsplit, so must split it first
-    dataset = split_dataset(data_path)
+    dataset = split_dataset(clean_data_path)
  
     # Calculate the stats using this un-normalized data
     train_mean, train_std = get_mean_and_std(dataset=dataset["train"])

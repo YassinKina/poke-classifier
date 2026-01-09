@@ -55,8 +55,8 @@ class CNN(nn.Module):
             # Create a fake image and pass it through the features only
             dummy_input = torch.zeros(1, *input_shape)
             dummy_output = self.features(dummy_input)
-            flattened_size = dummy_output.numel() # Total number of elements
-        # ----------------------------------------------------
+            flattened_size = dummy_output.numel() 
+       
 
         self.classifier = nn.Sequential(
             nn.Dropout(p=dropout_rate),

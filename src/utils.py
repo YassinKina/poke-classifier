@@ -3,6 +3,9 @@ from torchvision import transforms
 import torch
 from torch.utils.data import DataLoader
 import math
+import torch
+import numpy as np
+import random
 
 
 def get_mean_and_std(dataset):  
@@ -66,7 +69,30 @@ def get_best_val_accuracy():
     """
     return 0.5685
 
+def flatten_config(raw_dict, parent_key='', sep='/'):
+    flat_config = dict()
+    
+    for key, value in raw_dict.items():
+        if isinstance(value, dict):
+            # If it's a group (like 'training'), pull everything out
+            for sub_key, sub_value in value.items():
+                flat_config[sub_key] = sub_value
+        else:
+            # If it's a top-level setting (like 'device' or 'project_name')
+            flat_config[key] = value
+            
+    return flat_config
 
+
+
+
+def set_seed(seed=42):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed) # safe to call even on Mac
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    
 class NestedProgressBar:
     """A handler for nested tqdm progress bars for training and evaluation loops.
 

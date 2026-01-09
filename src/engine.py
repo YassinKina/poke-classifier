@@ -2,6 +2,10 @@ from src.utils import NestedProgressBar, get_best_val_accuracy
 import torch
 import os
 import wandb
+from omegaconf import OmegaConf, DictConfig
+import wandb
+from src.utils import flatten_config
+import optuna
 
 def train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar):
     """Trains the model for a single epoch.
@@ -79,7 +83,7 @@ def validate_epoch(model, val_dataloader, loss_func, device):
             
     return running_loss / total, correct / total            
 
-def train_model(model, optimizer, loss_func, train_dataloader,val_dataloader, device, n_epochs, wandb_run=None):
+def train_model(model, optimizer, scheduler, loss_func, train_dataloader,val_dataloader, device, n_epochs, wandb_run=None, trial=None):
     """Runs the training process for the model over multiple epochs.
 
     This function sets up a progress bar and manages the training loop,
@@ -114,12 +118,15 @@ def train_model(model, optimizer, loss_func, train_dataloader,val_dataloader, de
         
         # 2. Validate
         val_loss, val_acc = validate_epoch(model, val_dataloader, loss_func, device)
+        #Update scheduler 
+        scheduler.step(val_loss)
         
-        
+
         # 3. Log results
         status_msg = f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} Acc: {train_acc:.2%} | Val Loss: {val_loss:.4f} Acc: {val_acc:.2%}"
         pbar.maybe_log_epoch(epoch + 1, message=status_msg)
         
+        current_lr = optimizer.param_groups[0]['lr']
         # 4. Log to wandb
         if wandb_run is not None:
             wandb_run.log({
@@ -128,6 +135,7 @@ def train_model(model, optimizer, loss_func, train_dataloader,val_dataloader, de
                 "train/acc": train_acc,
                 "val/loss": val_loss,
                 "val/acc": val_acc,
+                "train/lr": current_lr
                 # "val/acc_top5": val_acc5
             })
         
@@ -138,6 +146,18 @@ def train_model(model, optimizer, loss_func, train_dataloader,val_dataloader, de
             os.makedirs("models", exist_ok=True)
             torch.save(model.state_dict(), save_path)
             print("New best model saved successfully")
+            
+        # After  val_acc is calculated
+    
+        if trial is not None:
+            # 1. Report the current result to Optuna
+            trial.report(val_acc, epoch)
+
+            # Check if the trial should be stopped
+            if trial.should_prune():
+                if wandb_run is not None:
+                    wandb_run.finish(exit_code=1) # Mark it as failed/stopped in W&B
+                raise optuna.exceptions.TrialPruned()
         
         
     # Close the progress bar and print a final completion message
@@ -145,20 +165,37 @@ def train_model(model, optimizer, loss_func, train_dataloader,val_dataloader, de
     
     if wandb_run is not None:
         wandb_run.finish()
+        
+    return best_val_acc
     
-def init_wandb_run(learning_rate, architecture, dataset, num_epochs):
-        # Start a new wandb run to track this script.
+def init_wandb_run(config: DictConfig, run_name):
+    """Initializes a wandb run with the provided hyperparameters (config)
+
+    Args:
+        cfg (DictConfig): Contains the hyperparameters for the run
+        run_name: Name of the Optuna trial
+    """
+    # Force W&B to use a more stable starting method for macOS
+    os.environ["WANDB_START_METHOD"] = "thread"
+     # Convert Hydra DictConfig to a standard Python dict
+    config_dict = OmegaConf.to_container(config, resolve=True)
+    
+    # Flatten the dict for WANDB columns so 'training.lr' becomes 'training/lr'
+    flat_config = flatten_config(config_dict)
+
+    # 2. Initialize wandb
     run = wandb.init(
-        # Set the wandb entity where your project will be logged (generally your team name).
         entity="yassinbkina",
-        # Set the wandb project where this run will be logged.
         project="pokemon-classification",
-        # Track hyperparameters and run metadata.
-        config={
-            "learning_rate": learning_rate,
-            "architecture": architecture,
-            "dataset": dataset,
-            "epochs": num_epochs,
-        },
+        config=flat_config, 
+        name=run_name,
+        group="optuna_hpo",
+        settings=wandb.Settings(start_method="thread"), 
+        reinit=True
     )
+    
+    print("WANDB config: ", wandb.config)
+    
     return run
+
+    

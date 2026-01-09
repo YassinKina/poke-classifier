@@ -3,79 +3,63 @@ import torch.nn as nn
 from src.data_setup import create_dataloaders
 from src.model import CNN
 from src.engine import train_model, init_wandb_run
+from src.utils import set_seed
 import os
 import random
 import wandb
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
-
-def main():
-    torch.manual_seed(42) 
+@hydra.main(version_base=None, config_path="config", config_name="config")
+def main(cfg: DictConfig):
+    set_seed()
     
-    # 1. Configuration & Hyperparameters
-    DATA_DIR = "./data/pokemon_clean"
-    BATCH_SIZE = 64
-    LEARNING_RATE = 0.0003
-    NUM_EPOCHS = 25
-    NUM_CLASSES = 150  
-    DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
-    ARCHITECTURE = "CNN"
-    DATASET_NAME = "fcakyon/pokemon-classification"
+    DATA_PATH = "./data/pokemon_clean"
     
-    # Model architecture parameters
-    N_LAYERS = 4
-    N_FILTERS = [32, 64, 128, 256]
-    KERNEL_SIZES = [3, 3, 3, 3]
-    DROPOUT_RATE = 0.2
-    FC_SIZE = 512
+   # 1. Accessing config values
+    print(f"Training on: {cfg.device}")
     
-   # wandb config
-    config = {
-        "learning_rate": LEARNING_RATE,
-        "architecture": ARCHITECTURE,
-        "dataset": DATASET_NAME,
-        "epochs": NUM_EPOCHS,
-        "batch_size": BATCH_SIZE,
-        "dropout": DROPOUT_RATE,
-        "n_layers": N_LAYERS
-    }
-    
-    wandb_run = init_wandb_run(config=config)
-
-    print(f"--- Training on Device: {DEVICE} ---")
-
-    # 2. Setup DataLoaders
-    train_dl, val_dl, test_dl = create_dataloaders(data_path=DATA_DIR, batch_size=BATCH_SIZE)
+    # 2. Setup Data (Accessing nested values)
+    train_dl, val_dl, _ = create_dataloaders(
+        clean_data_path=DATA_PATH,
+        batch_size=cfg.training.batch_size
+    )
 
     # 3. Initialize Model
     model = CNN(
-        n_layers=N_LAYERS,
-        n_filters=N_FILTERS,
-        kernel_sizes=KERNEL_SIZES,
-        dropout_rate=DROPOUT_RATE,
-        fc_size=FC_SIZE,
-        num_classes=NUM_CLASSES
-    ).to(DEVICE)
-
-    # 4. Define Loss and Optimizer
+        n_layers=cfg.model.n_layers,
+        n_filters=list(cfg.model.n_filters), # Hydra uses ListConfig, convert to list
+        dropout_rate=cfg.model.dropout_rate,
+        num_classes=cfg.training.num_classes,
+        kernel_sizes=cfg.model.kernel_sizes,
+        fc_size=cfg.model.fc_size
+    ).to(cfg.device)
+    
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=cfg.training.lr)
     loss_func = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    
-    
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, 
+                mode='min', 
+                factor=0.5, 
+                patience=3, 
+                verbose=True
+            )
+
+    # 4. Init W&B using the Hydra config
+    wandb_run = init_wandb_run(config=cfg)
 
     # 5. Start Training
-    wandb_run = init_wandb_run(config=config)
-    
     train_model(
         model=model,
         optimizer=optimizer,
+        scheduler=scheduler,
         loss_func=loss_func,
         train_dataloader=train_dl,
         val_dataloader=val_dl,
-        device=DEVICE,
-        n_epochs=NUM_EPOCHS,
+        device=cfg.device,             
+        n_epochs=cfg.training.epochs,  
         wandb_run=wandb_run
     )
-
   
 
 if __name__ == "__main__":

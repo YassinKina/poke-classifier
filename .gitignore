@@ -1,8 +1,36 @@
-data/
-.cache/
+# --- Python ---
 __pycache__/
-*.pth
-temp_images/
-.idea/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+build/
+dist/
+
+# Local logs for experiment tracking
+wandb/
+.comet_ml_runs/
+runs/
+lightning_logs/
+
+# Large Dataset Files 
+data/
+outputs/
+*.zip
+*.tar.gz
+*.csv
+
+# Model Weights (save these to a cloud drive/W&B instead)
+models/*.pth
+models/*.pt
+models/*.onnx
+*.pkl
+
+# --- Editors & OS ---
+.DS_Store
 .vscode/
-src/__pycache__
+.idea/
+*.swp
+*.swo
