@@ -3,40 +3,61 @@ from torchvision import transforms
 import torch
 from torch.utils.data import DataLoader
 import math
-import torch
 import numpy as np
 import random
 import os
+import wandb
+from typing import Tuple, Any, Optional
+from omegaconf import DictConfig, OmegaConf
 
+POKEMON_MEAN = torch.tensor([0.5863186717033386, 0.5674829483032227, 0.5336665511131287])
+POKEMON_STD = torch.tensor([0.34640103578567505, 0.33123084902763367, 0.34212544560432434])
 
-def get_mean_and_std(dataset):  
-    
-    """Calculates the mean and std of PokemonDataset
-    Args:
-        dataset: An instance of the PokemonDataset
-    Returns:
-        a float tuple[mean, std]
+def get_mean_and_std(dataset: Optional[Any]= None, fast: bool= True) -> Tuple[torch.Tensor, torch.Tensor]:  
     """
-    from src.dataset import PokemonDataset
+    Calculates the channel-wise mean and standard deviation for the dataset.
+
+    This function iterates through the dataset using a temporary DataLoader to compute 
+    the first and second raw moments of the pixel intensities. These moments are 
+    then used to derive the global mean and standard deviation, which are essential 
+    for proper image normalization during training and inference.
+    
+    If fast is True, we skip calculations and return the previously calculated mean and std
+
+    Args:
+        dataset (Any): A Hugging Face Dataset split (e.g., ds['train']) or an 
+            un-normalized dataset object.
+        fast (bool): A switch that determines whether the mean and std is recalculated
+
+    Returns:
+        Tuple[torch.Tensor, torch.Tensor]: A tuple containing the mean and 
+            standard deviation tensors, each with shape [3] (one per RGB channel).
+    """
+    # Avoid calcing same mean and std every time we train/eval
+    if fast:
+       return POKEMON_MEAN, POKEMON_STD
+   
+
+    from .dataset import PokemonDataset
         
     # Resize and ToTensor so we can calc the mean and std
     temp_transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor()
+        transforms.Resize((224, 224)),
+        transforms.ToTensor()
     ])
 
     # Create a temporary dataset instance
-    dataset = PokemonDataset(dataset_split=dataset,transform=temp_transform)
+    dataset_obj = PokemonDataset(dataset_split=dataset, transform=temp_transform)
     
     # Create a temporary loader without any normalization
     # We use a batch size to speed up the math
-    loader = DataLoader(dataset, batch_size=64, shuffle=False, num_workers=0)
+    loader = DataLoader(dataset_obj, batch_size=64, shuffle=False, num_workers=0)
     
-    print(f"Calculating stats for {len(dataset)} images...")
+    print(f"Calculating stats for {len(dataset_obj)} images...")
     
     cnt = 0
-    fst_moment = torch.empty(3)
-    snd_moment = torch.empty(3)
+    fst_moment = torch.zeros(3)
+    snd_moment = torch.zeros(3)
 
     for images, _ in tqdm(loader):
         # images shape: [batch_size, 3, height, width]
@@ -44,6 +65,7 @@ def get_mean_and_std(dataset):
         nb_pixels = b * h * w
         
         # Sum of pixel values per channel
+        # Calculate moving averages of moments to prevent overflow on large datasets
         fst_moment = (fst_moment * cnt + torch.sum(images, dim=[0, 2, 3])) / (cnt + nb_pixels)
         
         # Sum of square of pixel values per channel
@@ -114,6 +136,74 @@ def set_seed(seed=42):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
     
+def get_num_correct_in_top5(outputs: torch.Tensor, labels: torch.Tensor) -> int:
+    """
+    Calculates the number of targets present within the top 5 model predictions.
+
+    This function determines 'Top-5 accuracy' counts by identifying the indices 
+    of the 5 highest logits for each sample and checking if the ground truth 
+    label exists among them. T
+
+    Args:
+        outputs (torch.Tensor): Raw model logits of shape (batch_size, num_classes).
+        labels (torch.Tensor): Ground truth class indices of shape (batch_size).
+
+    Returns:
+        int: Total number of samples in the current batch where the target label 
+            was within the top 5 predicted indices.
+    """
+    # Expand labels from [batch_size] to [batch_size, 1] to compare against [batch_size, 5]
+    _, top5_indices = outputs.topk(5, 1, largest=True, sorted=True)
+    labels_reshaped = labels.view(-1, 1).expand_as(top5_indices)
+    
+    # See if the correct labels occurs in the top 5 predictions
+    correct_in_top5 = (top5_indices == labels_reshaped).any(dim=1).sum().item()
+    
+    return correct_in_top5
+
+def init_wandb_run(config: DictConfig, run_name: str) -> Any:
+    """
+    Initializes a Weights & Biases run with flattened configuration parameters.
+
+    Converts Hydra DictConfigs to standard dictionaries and prepares the environment
+    for a stable W&B initialization, specifically optimized for macOS threading.
+
+    Args:
+        config (DictConfig): The Hydra configuration containing hyperparameters.
+        run_name (str): The descriptive name for the W&B run.
+
+    Returns:
+        Any: The initialized W&B run object.
+    """
+    os.environ["WANDB_START_METHOD"] = "thread"
+    config_dict = OmegaConf.to_container(config, resolve=True)
+    flat_config = flatten_config(config_dict)
+
+    run = wandb.init(
+        entity="yassinbkina",
+        project="pokemon-classification",
+        config=flat_config, 
+        name=run_name,
+        group="optuna_hpo",
+        settings=wandb.Settings(start_method="thread"), 
+        reinit=True
+    )
+    
+    print("WANDB config: ", wandb.config)
+    return run
+    
+def get_list_labels():
+    labels = ["Golbat", "Machoke", "Omastar", "Diglett", "Lapras", "Kabuto", "Persian", "Weepinbell", "Golem", "Dodrio", "Raichu", "Zapdos", "Raticate", "Magnemite", 
+    "Ivysaur", "Growlithe", "Tangela", "Drowzee", "Rapidash", "Venonat", "Pidgeot", "Nidorino", "Porygon", "Lickitung", "Rattata", "Machop", "Charmeleon", "Slowbro", "Parasect", 
+    "Eevee", "Starmie", "Staryu", "Psyduck", "Dragonair", "Magikarp", "Vileplume", "Marowak", "Pidgeotto", "Shellder", "Mewtwo", "Farfetchd", "Kingler", "Seel", "Kakuna", "Doduo", 
+    "Electabuzz", "Charmander", "Rhyhorn", "Tauros", "Dugtrio", "Poliwrath", "Gengar", "Exeggutor", "Dewgong", "Jigglypuff", "Geodude", "Kadabra", "Nidorina", "Sandshrew", "Grimer", 
+    "MrMime", "Pidgey", "Koffing", "Ekans", "Alolan Sandslash", "Venusaur", "Snorlax", "Paras", "Jynx", "Chansey", "Hitmonchan", "Gastly", "Kangaskhan", "Oddish", "Wigglytuff", "Graveler", 
+    "Arcanine", "Clefairy", "Articuno", "Poliwag", "Abra", "Squirtle", "Voltorb", "Ponyta", "Moltres", "Nidoqueen", "Magmar", "Onix", "Vulpix", "Butterfree", "Krabby", "Arbok", "Clefable",
+    "Goldeen", "Magneton", "Dratini", "Caterpie", "Jolteon", "Nidoking", "Alakazam", "Dragonite", "Fearow", "Slowpoke", "Weezing", "Beedrill", "Weedle", "Cloyster", "Vaporeon", "Gyarados", 
+    "Golduck", "Machamp", "Hitmonlee", "Primeape", "Cubone", "Sandslash", "Scyther", "Haunter", "Metapod", "Tentacruel", "Aerodactyl", "Kabutops", "Ninetales", "Zubat", "Rhydon", "Mew", "Pinsir",
+    "Ditto", "Victreebel", "Omanyte", "Horsea", "Pikachu", "Blastoise", "Venomoth", "Charizard", "Seadra", "Muk", "Spearow", "Bulbasaur", "Bellsprout", "Electrode", "Gloom", "Poliwhirl", "Flareon",
+    "Seaking", "Hypno", "Wartortle", "Mankey", "Tentacool", "Exeggcute", "Meowth"]
+    return labels
 class NestedProgressBar:
     """A handler for nested tqdm progress bars for training and evaluation loops.
 

@@ -6,23 +6,32 @@ dataset: "fcakyon/pokemon-classification"
 # Training Hyperparameters
 training:
   batch_size: 32
-  lr: 0.00006881758157024532
-  epochs: 50
+  lr: 3.993373917854356e-05
+  epochs: 20
   num_classes: 150
+  weight_decay: 4.9346492159729534e-05
+  label_smoothing: 0.15414278990847424
+  scheduler_patience: 4
+  
 
 #  Model Architecture
 model:
   n_layers: 4
   n_filters: [32, 64, 128, 256]
-  dropout_rate: 0.3448163262529962
+  dropout_rate: 0.20665545969348426
   fc_size: 1024
   kernel_sizes: [3, 3, 3, 3]
   architecture: "CNN"
-
+  num_classes: 150
+  
 hpo:
-  n_trials: 20
+  n_trials: 30
   lr_range: [1e-5, 1e-4]
   dropout_range: [0.1, 0.5]
   layers_range: [2, 4]
   batch_options: [32, 64, 128]
   fc_options: [256, 512, 1024]
+  weight_decay_range: [1e-6, 1e-4]
+  label_smoothing_range: [0.05, 0.15]
+  scheduler_patience_range: [2, 5]
+

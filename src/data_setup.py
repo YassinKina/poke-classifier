@@ -10,7 +10,7 @@ from imagededup.methods import CNN
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from src.utils import get_mean_and_std
+from .utils import get_mean_and_std
 import glob
 from typing import Optional, Tuple, List, Union
 
@@ -254,7 +254,7 @@ def create_dataloaders(clean_data_path: str, batch_size: int = 64) -> Tuple[Data
     Returns:
         Tuple[DataLoader, DataLoader, DataLoader]: (train_loader, val_loader, test_loader).
     """
-    from src.dataset import PokemonDataset
+    from .dataset import PokemonDataset
     # Saved dataset is unsplit, so must split it first
     dataset = split_dataset(clean_data_path)
  
@@ -291,11 +291,3 @@ def verify_dataloaders(train_dl: DataLoader) -> None:
     print(f"Label Data Type: {labels.dtype}")
     print(f"Image Pixel Range: Min={images.min():.2f}, Max={images.max():.2f}")
 
-def test_main() -> None:
-    """
-    Orchestrates a basic end-to-end test of the data downloading and loading pipeline.
-    """
-    download_dataset("data/fcakyon___pokemon-classification")
-    ds = load_local_data()
-    print(ds)
-    view_dataset(ds)

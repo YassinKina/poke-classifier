@@ -1,4 +1,4 @@
-from .utils import NestedProgressBar, get_best_val_accuracy, flatten_config
+from .utils import NestedProgressBar, get_best_val_accuracy, flatten_config, get_num_correct_in_top5, init_wandb_run
 import torch
 import os
 import wandb
@@ -29,13 +29,15 @@ def train_epoch(model: torch.nn.Module,
         pbar (Any): A progress bar handler object to visualize training progress.
 
     Returns:
-        Tuple[float, float]: A tuple containing the average epoch loss and accuracy.
+        Tuple[float, float, float]: A tuple containing the average epoch loss, top1 accuracy, and top5 accuracy.
     """
     model.train()
     
-    running_loss = 0.0
-    correct = 0
+    top1_correct = 0
+    top5_correct = 0
     total = 0
+    running_loss = 0.0
+    
     
     for batch_idx, (inputs, labels) in enumerate(train_dataloader):
         pbar.update_batch(batch_idx + 1)
@@ -49,15 +51,21 @@ def train_epoch(model: torch.nn.Module,
         
         running_loss += loss.item() * inputs.size(0)
         _, predicted_class = outputs.max(1)
+        correct_in_top5 = get_num_correct_in_top5(outputs, labels)
+        
         total += labels.size(0)
-        correct += predicted_class.eq(labels).sum().item()
+        # Get exactly correct predictions
+        top1_correct += predicted_class.eq(labels).sum().item()
+        # Get number of preds where one of top5 preds is the correct label
+        top5_correct += correct_in_top5
+        
         
     epoch_loss = running_loss / total
-    epoch_acc = correct / total
+    top1_epoch_acc = top1_correct / total
+    top5_epoch_acc = top5_correct / total
     
-    return epoch_loss, epoch_acc
+    return epoch_loss, top1_epoch_acc, top5_epoch_acc
        
-
 def validate_epoch(model: torch.nn.Module, 
                    val_dataloader: DataLoader, 
                    loss_func: torch.nn.modules.loss._Loss, 
@@ -75,12 +83,13 @@ def validate_epoch(model: torch.nn.Module,
         device (torch.device): The hardware device for computation.
 
     Returns:
-        Tuple[float, float]: A tuple containing average validation loss and accuracy.
+        Tuple[float, float, float]: A tuple containing average validation loss, top1 accuracy, and top5 accuracy.
     """
     model.eval()
     
+    top1_correct = 0
+    top5_correct = 0
     running_loss = 0.0
-    correct = 0
     total = 0
     
     with torch.no_grad(): 
@@ -92,14 +101,17 @@ def validate_epoch(model: torch.nn.Module,
             
             running_loss += loss.item() * inputs.size(0)
             _, predicted = outputs.max(1)
+            correct_top5 = get_num_correct_in_top5(outputs, labels)
             
             total += labels.size(0)
-            correct += predicted.eq(labels).sum().item()
+            top1_correct += predicted.eq(labels).sum().item()
+            top5_correct += correct_top5
         
         avg_val_loss = running_loss / total
-        avg_val_accuracy = correct / total
+        avg_top1_val_accuracy = top1_correct / total
+        avg_top5_val_accuracy = top5_correct / total
             
-    return avg_val_loss, avg_val_accuracy    
+    return avg_val_loss, avg_top1_val_accuracy, avg_top5_val_accuracy   
 
 def train_model(model: torch.nn.Module, 
                 optimizer: torch.optim.Optimizer, 
@@ -145,12 +157,12 @@ def train_model(model: torch.nn.Module,
     for epoch in range(n_epochs):
         pbar.update_epoch(epoch + 1)
         
-        train_loss, train_acc = train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar)
-        val_loss, val_acc = validate_epoch(model, val_dataloader, loss_func, device)
+        train_loss, top1_train_acc, top5_train_acc = train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar)
+        val_loss, top1_val_acc, top5_val_acc = validate_epoch(model, val_dataloader, loss_func, device)
         
         scheduler.step(val_loss)
         
-        status_msg = f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} Acc: {train_acc:.2%} | Val Loss: {val_loss:.4f} Acc: {val_acc:.2%}"
+        status_msg = f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} Train Acc: {top1_train_acc:.2%} Train Top 5 Acc: {top5_train_acc:.2%} | Val Loss: {val_loss:.4f} Val Acc: {top1_val_acc:.2%} Val Top 5 Acc: {top5_val_acc:.2%} "
         pbar.maybe_log_epoch(epoch + 1, message=status_msg)
         
         current_lr = optimizer.param_groups[0]['lr']
@@ -159,20 +171,23 @@ def train_model(model: torch.nn.Module,
             wandb_run.log({
                 "epoch": epoch + 1,
                 "train/loss": train_loss,
-                "train/acc": train_acc,
+                "train/acc": top1_train_acc,
+                "train/top5_acc": top5_train_acc,  
                 "val/loss": val_loss,
-                "val/acc": val_acc,
+                "val/acc": top1_val_acc,
+                "val/top5_acc": top5_val_acc,      
                 "train/lr": current_lr
             })
         # Save checkpoint if model is performing better than previously
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
+        if top1_val_acc > best_val_acc:
+            best_val_acc = top1_val_acc
             save_path = "models/pokemon_cnn_best.pth"
             os.makedirs("models", exist_ok=True)
             
             checkpoint = {
                 'state_dict': model.state_dict(),
-                'accuracy': val_acc,
+                'accuracy': top1_val_acc,
+                "top5_accuracy" : top5_val_acc,
                 'epoch': epoch,
                 'run_id': wandb.run.id if wandb.run else None  
             }
@@ -180,10 +195,12 @@ def train_model(model: torch.nn.Module,
             
         # Prune optuna trial if it is performing poorly    
         if trial is not None:
-            trial.report(val_acc, epoch)
+            trial.report(top1_val_acc, epoch)
+            
             if trial.should_prune():
                 if wandb_run is not None:
-                    wandb_run.finish(exit_code=1)
+                    wandb_run.tags = wandb_run.tags + ("pruned",)
+                    wandb_run.finish() 
                 raise optuna.exceptions.TrialPruned()
         
     pbar.close("Training complete!\n")
@@ -191,38 +208,6 @@ def train_model(model: torch.nn.Module,
         wandb_run.finish()
         
     return best_val_acc
-
-
-def init_wandb_run(config: DictConfig, run_name: str) -> Any:
-    """
-    Initializes a Weights & Biases run with flattened configuration parameters.
-
-    Converts Hydra DictConfigs to standard dictionaries and prepares the environment
-    for a stable W&B initialization, specifically optimized for macOS threading.
-
-    Args:
-        config (DictConfig): The Hydra configuration containing hyperparameters.
-        run_name (str): The descriptive name for the W&B run.
-
-    Returns:
-        Any: The initialized W&B run object.
-    """
-    os.environ["WANDB_START_METHOD"] = "thread"
-    config_dict = OmegaConf.to_container(config, resolve=True)
-    flat_config = flatten_config(config_dict)
-
-    run = wandb.init(
-        entity="yassinbkina",
-        project="pokemon-classification",
-        config=flat_config, 
-        name=run_name,
-        group="optuna_hpo",
-        settings=wandb.Settings(start_method="thread"), 
-        reinit=True
-    )
-    
-    print("WANDB config: ", wandb.config)
-    return run
 
 @torch.no_grad()
 def test_model(model: torch.nn.Module, 
@@ -245,21 +230,42 @@ def test_model(model: torch.nn.Module,
     model.eval()
     all_preds = []
     all_labels = []
+    total = 0
+    top1_correct = 0
+    top5_correct = 0
     
     print("Starting Final Test Evaluation...")
     for images, labels in test_loader:
         images, labels = images.to(device), labels.to(device)
-        
         outputs = model(images)
-        _, preds = torch.max(outputs, 1)
+        # Get number of exact correct predictions
+        _, top1_preds = torch.max(outputs, 1)
+        top1_correct += top1_preds.eq(labels).sum().item()
         
-        all_preds.extend(preds.cpu().numpy())
+       # Expand labels from [batch_size] to [batch_size, 1] to compare against [batch_size, 5]
+        # _, top5_indices = outputs.topk(5,1, largest=True, sorted=True)
+        # labels_reshaped = labels.view(-1, 1).expand_as(top5_indices)
+        # # See if the correct labels occurs in the top 5 predictions
+        # correct_in_top5 = (top5_indices == labels_reshaped).any(dim=1).sum().item()
+        
+        correct_in_top5 = get_num_correct_in_top5(outputs, labels)
+        top5_correct += correct_in_top5
+        
+        all_preds.extend(top1_preds.cpu().numpy())
         all_labels.extend(labels.cpu().numpy())
+        total += labels.size(0)
     
     all_preds = np.array(all_preds)
     all_labels = np.array(all_labels)
     
-    accuracy = (all_preds == all_labels).mean()
-    print(f"Final Test Accuracy: {accuracy*100:.2f}%")
+    top1_acc = top1_correct / total
+    top5_acc = top5_correct / total
+    
+    
+    print(f"Top-1 Accuracy: {top1_acc:.2%}")
+    print(f"Top-5 Accuracy: {top5_acc:.2%}")
     
     return all_labels, all_preds
+
+
+
