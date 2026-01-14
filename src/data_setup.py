@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 from collections import defaultdict
-from imagededup.methods import CNN
+# from imagededup.methods import CNN
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision import transforms

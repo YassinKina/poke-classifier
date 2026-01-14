@@ -1,24 +1,43 @@
 # Core Machine Learning
+# torch
+# torchvision
+# torchinfo
+# torchview
+# datasets
+
+# # Configuration & Optimization
+# hydra-core==1.3.2
+# optuna==4.6.0
+# omegaconf==2.3.0
+
+# # Experiment Tracking & Viz
+# wandb==0.23.1
+# seaborn==0.13.2
+# matplotlib>=3.7.0
+
+# # Utilities
+# tqdm>=4.65.0
+# pillow>=9.5.0
+# numpy>=1.24.0
+# streamlit
+# # imagededup==0.3.3.post2
+# # imagehash==4.3.2
+
+streamlit
 torch
 torchvision
 torchinfo
 torchview
+hydra-core
+optuna
+omegaconf
+wandb
+seaborn
+matplotlib
+tqdm
+pillow
+numpy
 datasets
-
-# Configuration & Optimization
-hydra-core==1.3.2
-optuna==4.6.0
-omegaconf==2.3.0
-
-# Experiment Tracking & Viz
-wandb==0.23.1
-seaborn==0.13.2
-matplotlib>=3.7.0
-
-# Utilities
-tqdm>=4.65.0
-pillow>=9.5.0
-numpy>=1.24.0
-streamlit
-# imagededup==0.3.3.post2
-# imagehash==4.3.2
+imagededup
+imagehash
+pyyaml
