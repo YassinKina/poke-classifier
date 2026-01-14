@@ -19,7 +19,7 @@ def load_model(model_path: str, config_path: str, device: torch.device) -> Dynam
         kernel_sizes=cfg['model']['kernel_sizes'],
         dropout_rate=cfg['model']['dropout_rate'],
         fc_size=cfg['model']['fc_size'],
-        num_classes=150
+        num_classes=cfg["training"]["num_classes"]
     ).to(device)
 
     
