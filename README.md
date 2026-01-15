@@ -2,32 +2,45 @@
 
 A high-performance deep learning pipeline designed to classify the original 150 Pokémon species. This project implements a custom **DynamicCNN** architecture that allows for automated architectural searches, combined with a rigorous Hyperparameter Optimization (HPO) workflow.
 
-graph LR
-    subgraph Input
-        A[Input Image<br/>3x224x224]
-    end
+### 🏗 Model Architecture
 
-    subgraph Feature_Extraction[Feature Extraction: 4x Conv Blocks]
-        B[Conv + BN + ReLU<br/>32 Filters] --> C[MaxPool]
-        C --> D[Conv + BN + ReLU<br/>64 Filters] --> E[MaxPool]
-        E --> F[Conv + BN + ReLU<br/>128 Filters] --> G[MaxPool]
-        G --> H[Conv + BN + ReLU<br/>256 Filters] --> I[MaxPool]
-    end
+The model is a **Dynamic Convolutional Neural Network** consisting of four sequential feature extraction blocks followed by a fully connected classification head.
 
-    subgraph Classifier[Classification Head]
-        J[Flatten] --> K[Dropout 1]
-        K --> L[Linear 1024] --> M[ReLU]
-        M --> N[Dropout 2] --> O[Linear 150]
-    end
+<details>
+<summary>🔍 Click to view detailed layer-by-layer summary</summary>
 
-    A --> B
-    I --> J
-    O --> P[Output: Pokemon Class]
-
-    style Input fill:#f9f,stroke:#333,stroke-width:2px
-    style Output fill:#bbf,stroke:#333,stroke-width:2px
-    style Feature_Extraction fill:#dfd
-    style Classifier fill:#ffd
+```text
+==========================================================================================
+Layer (type:depth-idx)                   Output Shape              Param #
+==========================================================================================
+DynamicCNN                               [1, 150]                  --
+├─Sequential: 1-1                        [1, 256, 14, 14]          --
+│    └─Sequential: 2-1                   [1, 32, 112, 112]         --
+│    │    └─Conv2d: 3-1                  [1, 32, 224, 224]         896
+│    │    └─BatchNorm2d: 3-2             [1, 32, 224, 224]         64
+│    │    └─ReLU: 3-3                    [1, 32, 224, 224]         --
+│    │    └─MaxPool2d: 3-4               [1, 32, 112, 112]         --
+│    └─Sequential: 2-2                   [1, 64, 56, 56]           --
+│    │    └─Conv2d: 3-5                  [1, 64, 112, 112]         18,496
+│    │    └─BatchNorm2d: 3-6             [1, 64, 112, 112]         128
+│    │    └─ReLU: 3-7                    [1, 64, 112, 112]         --
+│    │    └─MaxPool2d: 3-8               [1, 64, 56, 56]           --
+│    └─Sequential: 2-3                   [1, 128, 28, 28]          --
+│    │    └─Conv2d: 3-9                  [1, 128, 56, 56]          73,856
+│    │    └─BatchNorm2d: 3-10            [1, 128, 56, 56]          256
+│    │    └─ReLU: 3-11                   [1, 128, 56, 56]          --
+│    │    └─MaxPool2d: 3-12              [1, 128, 28, 28]          --
+│    └─Sequential: 2-4                   [1, 256, 14, 14]          --
+│    │    └─Conv2d: 3-13                 [1, 256, 28, 28]          295,168
+│    │    └─BatchNorm2d: 3-14            [1, 256, 28, 28]          512
+│    │    └─ReLU: 3-15                   [1, 256, 28, 28]          --
+│    │    └─MaxPool2d: 3-16              [1, 256, 14, 14]          --
+...
+Forward/backward pass size (MB): 48.18
+Params size (MB): 207.70
+Estimated Total Size (MB): 256.48
+==========================================================================================
+</details>
 
 
 

@@ -6,10 +6,13 @@ import yaml
 from src.model import DynamicCNN
 from src.data_setup import get_train_test_transforms, get_mean_and_std
 from src. utils import get_list_labels
+from huggingface_hub import hf_hub_download
 
 # --- CONFIGURATION ---
-MODEL_PATH = "models/pokemon_cnn_best.pth"
+REPO_ID = "yassinkina/pokemon-cnn"
 SAMPLES_DIR = "samples/"
+FILENAME = "pokemon_cnn_best.pth"
+CONFIG_PATH = "config/config.yaml"
 
 # --- CALLBACKS FOR MUTUAL EXCLUSION ---
 def on_upload_change():
@@ -27,29 +30,42 @@ if "selector_key" not in st.session_state:
     st.session_state.selector_key = 0
 
 # --- MODEL LOADING ---
+
 @st.cache_resource
-def load_model():
-    with open("config/config.yaml", "r") as f:
+def load_model(repo_id: str, filename: str, config_path: str):
+    """
+    Downloads weights from Hugging Face Hub and initializes the DynamicCNN.
+    """
+    device = torch.device("cpu") # Streamlit Cloud uses CPU
+    
+    # 1. Download the weights file to a local cache
+    model_path = hf_hub_download(repo_id=repo_id, filename=filename)
+    
+    # 2. Load configuration
+    with open(config_path, "r") as f:
         cfg = yaml.safe_load(f)
-    
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-    
+
+    # 3. Initialize architecture
     model = DynamicCNN(
         n_layers=cfg['model']['n_layers'],
         n_filters=cfg['model']['n_filters'],
         kernel_sizes=cfg['model']['kernel_sizes'],
         dropout_rate=cfg['model']['dropout_rate'],
         fc_size=cfg['model']['fc_size'],
-        num_classes=cfg["model"]["num_classes"]
+        num_classes=cfg["training"]["num_classes"]
     ).to(device)
+
+    # 4. Load state dict
+    checkpoint = torch.load(model_path, map_location=device)
     
-    checkpoint = torch.load(MODEL_PATH, map_location=device)
-    state_dict = checkpoint["state_dict"] if isinstance(checkpoint, dict) and "state_dict" in checkpoint else checkpoint
+    # Handle both full checkpoints and state_dict-only files
+    state_dict = checkpoint['state_dict'] if 'state_dict' in checkpoint else checkpoint
     model.load_state_dict(state_dict)
+    
     model.eval()
     return model, device
 
-model, DEVICE = load_model()
+model, DEVICE = load_model(REPO_ID, FILENAME, CONFIG_PATH)
 CLASS_NAMES = get_list_labels()
 mean, std = get_mean_and_std()
 _, test_transform = get_train_test_transforms(mean=mean, std=std)

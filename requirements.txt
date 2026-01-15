@@ -42,3 +42,4 @@ datasets==2.18.0
 imagededup
 imagehash
 pyyaml
+huggingface_hub
