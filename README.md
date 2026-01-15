@@ -1,6 +1,6 @@
 # Pokémon Image Classifier: Dynamic CNN with HPO
 
-A high-performance deep learning pipeline designed to classify the original 150 Pokémon species. This project implements a custom **DynamicCNN** architecture that allows for automated architectural searches, combined with a rigorous Hyperparameter Optimization (HPO) workflow.
+A high-performance deep learning pipeline designed to classify 150 Generation I Pokémon species. This project implements a custom **DynamicCNN** architecture that allows for automated architectural searches, combined with a rigorous Hyperparameter Optimization (HPO) workflow.
 
 ### 🏗 Model Architecture
 
@@ -135,6 +135,7 @@ the input when given a pokemon card image.
 * Inequality in the representation of some labels
 * The training images in the cakyon___pokemon-classification
 dataset were less than 5,000, as I used a pretrained CNN to remove any augmented images in the initial dataset
+* Dataset does not include Nidoran, both male and female versions 
 
 
 ## In Progress
