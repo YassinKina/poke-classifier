@@ -11,7 +11,7 @@ The model is a **Dynamic Convolutional Neural Network** consisting of four seque
 
 <br>
 
-
+```text
 ==========================================================================================
 Layer (type:depth-idx)                   Output Shape              Param #
 ==========================================================================================
@@ -42,6 +42,7 @@ Forward/backward pass size (MB): 48.18
 Params size (MB): 207.70
 Estimated Total Size (MB): 256.48
 ==========================================================================================
+```
 
 </details>
 
