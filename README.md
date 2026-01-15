@@ -11,7 +11,7 @@ The model is a **Dynamic Convolutional Neural Network** consisting of four seque
 
 <br>
 
-```text
+
 ==========================================================================================
 Layer (type:depth-idx)                   Output Shape              Param #
 ==========================================================================================
