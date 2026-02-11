@@ -52,7 +52,6 @@ def get_mean_and_std(dataset: Optional[Any]= None, fast: bool= True) -> Tuple[to
     dataset_obj = PokemonDataset(dataset_split=dataset, transform=temp_transform)
     
     # Create a temporary loader without any normalization
-    # We use a batch size to speed up the math
     loader = DataLoader(dataset_obj, batch_size=64, shuffle=False, num_workers=0)
     
     print(f"Calculating stats for {len(dataset_obj)} images...")
@@ -67,7 +66,6 @@ def get_mean_and_std(dataset: Optional[Any]= None, fast: bool= True) -> Tuple[to
         nb_pixels = b * h * w
         
         # Sum of pixel values per channel
-        # Calculate moving averages of moments to prevent overflow on large datasets
         fst_moment = (fst_moment * cnt + torch.sum(images, dim=[0, 2, 3])) / (cnt + nb_pixels)
         
         # Sum of square of pixel values per channel

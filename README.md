@@ -129,13 +129,14 @@ This project uses custom-calculated channel-wise statistics to account for the u
 * Std: [0.3464, 0.3312, 0.3421]
 
 
-## Data Limitaions
+## Data Limitaions & Notes
 * Very few training data were pictures of pokemon cards. As a result, the model struggles to correctly classify
 the input when given a pokemon card image.
 * Inequality in the representation of some labels
 * The training images in the cakyon___pokemon-classification
 dataset were less than 5,000, as I used a pretrained CNN to remove any augmented images in the initial dataset
 * Dataset does not include Nidoran, both male and female versions 
+* Dataset includes Alolan Sandslash from Generation VI
 
 
 ## In Progress

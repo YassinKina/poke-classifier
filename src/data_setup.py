@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 from collections import defaultdict
-# from imagededup.methods import CNN
+from imagededup.methods import CNN
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -27,7 +27,7 @@ def download_dataset(raw_path: str) -> None:
     ds = load_dataset("fcakyon/pokemon-classification", cache_dir=raw_path, revision="refs/convert/parquet")
     return
 
-def load_local_data() -> DatasetDict:
+def load_local_data(data_dir:str) -> DatasetDict:
     """
     Locates and loads local .arrow files into a Hugging Face DatasetDict.
 
@@ -37,8 +37,9 @@ def load_local_data() -> DatasetDict:
     Raises:
         FileNotFoundError: If no .arrow files are found in the expected directory.
     """
+    
     # Use the root of your data directory
-    base_search_path = "./data/fcakyon___pokemon-classification"
+    base_search_path = os.path.join(data_dir, "fcakyon___pokemon-classification")
     
     # Look for any .arrow files recursively within that folder
     arrow_files = glob.glob(os.path.join(base_search_path, "**/*.arrow"), recursive=True)
@@ -90,7 +91,7 @@ def view_dataset(ds: DatasetDict, split: str = "train", idx: Optional[int] = Non
     plt.axis('off')
     plt.show()
 
-def sanitize_dataset(save_path: str) -> DatasetDict:
+def sanitize_dataset(save_path: str, data_dir: str) -> DatasetDict:
     """
     Performs global deduplication across all splits and re-stratifies the data into 80/10/10 splits.
 
@@ -100,11 +101,14 @@ def sanitize_dataset(save_path: str) -> DatasetDict:
     Returns:
         DatasetDict: The deduplicated and re-split dataset.
     """
-    #  Load the existing arrow files (which currently have duplicates)
-    ds_full_dict = load_local_data()
+      # Use the root of your data directory
+ 
+    #  Load the existing arrow files (which currently have duplicates and augmentations)
+    ds_full_dict = load_local_data(data_dir=data_dir)
+    
     
     # Flatten into one single Dataset
-    print("Combining all splits for global deduplication...")
+    print("Combining all splits and removing duplicate/augmented images...")
     combined_ds = concatenate_datasets([
         ds_full_dict["train"], 
         ds_full_dict["validation"], 
@@ -112,7 +116,8 @@ def sanitize_dataset(save_path: str) -> DatasetDict:
     ])
     
     # Export images to one temp folder for the CNN
-    temp_dir = "./data/temp_images_global"
+    temp_dir_imgs = "temp_images_global"
+    temp_dir = os.path.join(data_dir, temp_dir_imgs)
     os.makedirs(temp_dir, exist_ok=True)
     
     for idx, example in enumerate(combined_ds):
