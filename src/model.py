@@ -77,7 +77,6 @@ class DynamicCNN(nn.Module):
             dummy_output = self.features(dummy_input)
             flattened_size = int(dummy_output.numel())
         
-       
         self.classifier = nn.Sequential(
             nn.Dropout(p=dropout_rate),
             nn.Linear(flattened_size, fc_size),

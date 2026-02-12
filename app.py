@@ -72,7 +72,7 @@ _, test_transform = get_train_test_transforms(mean=mean, std=std)
 
 # --- UI LAYOUT ---
 st.set_page_config(page_title="Pokémon Classifier", layout="wide")
-st.title("⚡ Pokémon Species Classifier")
+st.title("⚡ Pokémon Classifier")
 st.markdown("---")
 
 # --- SIDEBAR & MAIN INPUT ---
