@@ -134,7 +134,7 @@ class DynamicCNN(nn.Module):
             f"  (Initial Filters): {self.n_filters}\n"
             f"  (FC Layer Size): {self.fc_size}\n"
             f"  (Dropout Rate): {self.dropout_rate:2%}\n"
-            f"  (Num Classes): {len(self.fc[-1].bias) if hasattr(self, 'fc') else 'Unknown'}\n"
+            f"  (Num Classes): {self.num_classes}\n"
             f"  (Trainable Params): {trainable_params:,}\n"
             f"  (Frozen/Non-grad Params): {frozen_params:,}\n"
             f"  (BatchNorm Buffers): {buffer_params:,}\n"

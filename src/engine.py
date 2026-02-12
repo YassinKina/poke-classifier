@@ -214,7 +214,8 @@ def train_model(model: torch.nn.Module,
 @torch.no_grad()
 def test_model(model: torch.nn.Module, 
                test_loader: DataLoader, 
-               device: torch.device) -> Tuple[np.ndarray, np.ndarray]:
+               device: torch.device,
+               ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Evaluates the model on the test dataset to calculate final hold-out accuracy.
 
@@ -243,12 +244,6 @@ def test_model(model: torch.nn.Module,
         # Get number of exact correct predictions
         _, top1_preds = torch.max(outputs, 1)
         top1_correct += top1_preds.eq(labels).sum().item()
-        
-       # Expand labels from [batch_size] to [batch_size, 1] to compare against [batch_size, 5]
-        # _, top5_indices = outputs.topk(5,1, largest=True, sorted=True)
-        # labels_reshaped = labels.view(-1, 1).expand_as(top5_indices)
-        # # See if the correct labels occurs in the top 5 predictions
-        # correct_in_top5 = (top5_indices == labels_reshaped).any(dim=1).sum().item()
         
         correct_in_top5 = get_num_correct_in_top5(outputs, labels)
         top5_correct += correct_in_top5

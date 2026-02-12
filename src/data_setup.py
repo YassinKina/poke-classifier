@@ -1,12 +1,12 @@
 import os
 import torch
-from datasets import load_dataset, load_from_disk, DatasetDict, concatenate_datasets
+from datasets import load_dataset, load_from_disk, DatasetDict, concatenate_datasets, load_from_disk
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 import random
 from collections import defaultdict
-from imagededup.methods import CNN
+# from imagededup.methods import CNN
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -101,7 +101,11 @@ def sanitize_dataset(save_path: str, data_dir: str) -> DatasetDict:
     Returns:
         DatasetDict: The deduplicated and re-split dataset.
     """
-      # Use the root of your data directory
+    # If cleaned data already exists, no need to remake it
+    if os.path.exists(save_path):
+        print(f"Cleaned data already exists at path {save_path}. Skipping sanitization.")
+        final_ds = load_from_disk(save_path)
+        return final_ds
  
     #  Load the existing arrow files (which currently have duplicates and augmentations)
     ds_full_dict = load_local_data(data_dir=data_dir)
@@ -191,6 +195,7 @@ def split_dataset(cleaned_path: str = "data/pokemon_clean") -> DatasetDict:
     """
     ds =  None
     raw_path = "data/fcakyon___pokemon-classification"
+    
     # Create cleaned dataset with balanced labels representation
     if not os.path.exists(cleaned_path):
         if not os.path.exists(raw_path):
