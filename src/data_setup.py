@@ -14,17 +14,23 @@ from .utils import get_mean_and_std
 import glob
 from typing import Optional, Tuple, List, Union
 
-def download_dataset(raw_path: str) -> None:
+def download_dataset(data_dir: str) -> None:
     """
     Downloads the Pokémon dataset from Hugging Face if it does not already exist.
 
     Args:
         raw_path (str): The local directory path where the dataset should be stored.
     """
-    os.makedirs(raw_path, exist_ok=True)
+    
+    search_path = os.path.join(data_dir, "fcakyon___pokemon-classification")
+    if os.path.exists(search_path):
+        print(f"Raw dataset already exists at path {search_path}. Skipping download.")
+        return
+    
+    os.makedirs(data_dir, exist_ok=True)
     print("Downloading pokemon dataset...")
     # Download dataset from HF
-    ds = load_dataset("fcakyon/pokemon-classification", cache_dir=raw_path, revision="refs/convert/parquet")
+    ds = load_dataset("fcakyon/pokemon-classification", cache_dir=data_dir, revision="refs/convert/parquet")
     return
 
 def load_local_data(data_dir:str) -> DatasetDict:
@@ -159,29 +165,6 @@ def sanitize_dataset(save_path: str, data_dir: str) -> DatasetDict:
     print(f"Cleaned and re-stratified dataset saved at {save_path}")
     return final_ds
 
-def save_dataset_locally(dataset: DatasetDict) -> None:
-    """
-    Saves a DatasetDict to a project-relative 'data/pokemon_clean' directory.
-
-    Args:
-        dataset (DatasetDict): The dataset object to be saved.
-    """
-    # Get the path of the current file (data_setup.py)
-    current_file = Path(__file__).resolve()
-
-    # Go up one level to the project root
-    project_root = current_file.parent.parent
-
-    # Define the data folder relative to the root
-    folder_path = project_root / "data" / "pokemon_clean"
-
-    # Ensure the directory exists
-    os.makedirs(folder_path, exist_ok=True)
-    
-    # Save the dataset
-    print(f"Saving dataset to {folder_path}...")
-    dataset.save_to_disk(folder_path)
-    print("Save complete!")
 
 def split_dataset(cleaned_path: str = "data/pokemon_clean") -> DatasetDict:
     """
@@ -193,8 +176,8 @@ def split_dataset(cleaned_path: str = "data/pokemon_clean") -> DatasetDict:
     Returns:
         DatasetDict: The master sanitized dataset containing all splits.
     """
-    ds =  None
-    raw_path = "data/fcakyon___pokemon-classification"
+
+    raw_path = os.path.join("data", "fcakyon___pokemon-classification")
     
     # Create cleaned dataset with balanced labels representation
     if not os.path.exists(cleaned_path):
