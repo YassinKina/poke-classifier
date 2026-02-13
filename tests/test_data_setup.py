@@ -101,7 +101,6 @@ def create_dummy_image():
     img_array = np.random.randint(0, 256, (300, 300, 3), dtype=np.uint8)
     return Image.fromarray(img_array)
 
-
 def test_returns_compose_objects():
     train_t, test_t = data_setup.get_train_test_transforms(POKEMON_MEAN, POKEMON_STD)
 
@@ -116,7 +115,6 @@ def test_train_contains_augmentations():
     assert transforms.RandomHorizontalFlip in transform_types
     assert transforms.RandomRotation in transform_types
 
-
 def test_test_has_no_augmentations():
     _, test_t = data_setup.get_train_test_transforms(POKEMON_MEAN, POKEMON_STD)
 
@@ -125,7 +123,6 @@ def test_test_has_no_augmentations():
     assert transforms.RandomResizedCrop not in transform_types
     assert transforms.RandomHorizontalFlip not in transform_types
     assert transforms.RandomRotation not in transform_types
-
 
 def test_output_shape_and_type():
     train_t, test_t = data_setup.get_train_test_transforms(POKEMON_MEAN, POKEMON_STD)
@@ -143,8 +140,6 @@ def test_output_shape_and_type():
 
 # ______end of get_train_test_transforms tests________  
 
-
-
 class DummyDataset(torch.utils.data.Dataset):
     def __init__(self, size=20):
         self.size = size
@@ -157,7 +152,6 @@ class DummyDataset(torch.utils.data.Dataset):
         label = torch.tensor(idx % 5)
         return image, label
 
-
 # -----------------------------
 # Fixtures
 # -----------------------------
@@ -168,8 +162,6 @@ def mock_split_dataset():
         "validation": list(range(10)),
         "test": list(range(15)),
     }
-
-
 
 # ____Tests for create_dataloaders____
 

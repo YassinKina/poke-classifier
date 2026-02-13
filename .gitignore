@@ -9,6 +9,7 @@ env/
 venv/
 build/
 dist/
+tests/.pytest_cache
 
 # Local logs for experiment tracking
 wandb/

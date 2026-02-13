@@ -1,13 +1,38 @@
-# Pokémon Image Classifier: Dynamic CNN with HPO
+# Pokémon Image Classifier: Dynamic CNN with Hyperparameter Optimization
 
-A high-performance deep learning pipeline designed to classify 150 Generation I Pokémon species. This project implements a custom **DynamicCNN** architecture that allows for automated architectural searches, combined with a rigorous Hyperparameter Optimization (HPO) workflow.
+A high-performance deep learning pipeline designed to classify 150 Pokémon species. This project implements a custom **DynamicCNN** architecture that allows for automated architectural searches, combined with a **Hyperparameter Optimization** (HPO) workflow.
+
+### The Problem
+
+Classifying 150 Pokémon species from a dataset with high class imbalance. More than 50% of training labels are not present in the test and validation sets, meaning we would be unable to accurately assess the model's performance.
+![Class Imbalance](assets/original_class_splits.png)
+
+### The Solution
+
+Prior to training the model, we must utilize stratifed data splitting to ensure all 150 classes appear in each dataset split. Additionally, we compose data augmentations with `torchvision.Transforms` to provide the model with enough samples to learn from the data, prevent overfitting, and so that we can accurately evaluate the model's performance.
+![Class Balance](assets/stratified_class_splits.png)
+
+### The Results
+
+- **Top-1 Accuracy:** `67.86%` (Exact Pokemon match)
+- **Top-5 Accuracy:** `89.40%` (Correct Pokemon is within top 5 candidates)
+---
+
+
+
+
+### Live Demo
+
+<a href="https://poke-classifier-pytorch.streamlit.app/" target="_blank" rel="noopener noreferrer">Check out the interactive web app here!</a>
+
+_Upload your own Pokémon image or choose from a curated sample gallery to see the model's Top-5 predictions in real-time._
+
 
 ### Model Architecture
 
 The model is a **Dynamic Convolutional Neural Network** consisting of four sequential feature extraction blocks followed by a fully connected classification head.
-
 <details>
-<summary>🔍 Click to view detailed layer-by-layer summary</summary>
+<summary>Click to view detailed layer-by-layer summary</summary>
 
 <br>
 
@@ -46,19 +71,6 @@ Estimated Total Size (MB): 256.48
 
 </details>
 
-## Live Demo
-
-<a href="https://poke-classifier-pytorch.streamlit.app/" target="_blank" rel="noopener noreferrer">Check out the interactive web app here!</a>
-
-_Upload your own Pokémon image or choose from a curated sample gallery to see the model's Top-5 predictions in real-time._
-
-## Performance Summary
-
-- **Top-1 Accuracy:** `67.86%` (Exact Pokemon match)
-- **Top-5 Accuracy:** `89.40%` (Correct Pokemon is within top 5 candidates)
-- **Optimization:** 20-trial study using Bayesian TPE Sampling and Median Pruning.
-
----
 
 ## Features
 
@@ -96,11 +108,12 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 ├── predict.py          # CLI tool for single-image inference
 ├── config/             # Hydra YAML configurations
 │   ├── config.yaml     # Default training settings
-│   └── hpo/            # Optuna-specific search space configurations
 ├── data/               # Pokémon dataset (Cleaned & Preprocessed)
 ├── models/             # Saved checkpoints (.pth files + training metadata)
-├── notebooks/          # Jupyter notebooks for EDA and prototyping
+├── notebooks/          # Jupyter notebooks for EDA
+|    |── EDA.ipynb
 ├── samples/            # Curated images for Streamlit demo testing
+|── tests/              # Tests for function in src/
 ├── src/                # Modular source code package
 │   ├── __init__.py     # Makes src a Python package
 │   ├── dataset.py      # Custom PyTorch Dataset class
@@ -131,25 +144,18 @@ Load the best weights from the `models/ `directory and evaluate on the hold-out 
 
 `python predict.py`
 
-## Data Normalization
 
-This project uses custom-calculated channel-wise statistics to account for the unique color distribution of Pokémon art
-(higher brightness and saturation compared to natural images) rather than standard ImageNet defaults:
+### Data Limitaions & Notes
 
-- Mean: [0.5863, 0.5675, 0.5337]
-- Std: [0.3464, 0.3312, 0.3421]
-
-## Data Limitaions & Notes
-
-- Very few training data were pictures of pokemon cards. As a result, the model struggles to correctly classify
-  the input when given a pokemon card image.
+- Pokémon cards all look quite similar, and as a result the model struggles when the sample is a picture of a Pokémon card
 - Inequality in the representation of some labels
 - The training images in the cakyon\_\_\_pokemon-classification
-  dataset were less than 5,000, as I used a pretrained CNN to remove any augmented images in the initial dataset
+  dataset were less than 5,000, as I used a pretrained CNN to remove any augmented/duplicate images in the initial dataset
+- Model will always give a prediction, even on Pokémon it was not trained on
 - Dataset does not include Nidoran, both male and female versions
 - Dataset includes Alolan Sandslash from Generation VI
 
-## In Progress
+### In Progress
 
 - Hyperparameter analysis
 - Fine tune a pretrained ResNet model on the same dataset and compare the performance of the two models
