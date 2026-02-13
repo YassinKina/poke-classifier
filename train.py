@@ -32,13 +32,13 @@ def main(cfg: DictConfig):
    # 1. Accessing config values
     print(f"Training on: {cfg.device}") 
     
-    # 2. Setup Data (Accessing nested values)
+    # 2. Setup data (Accessing nested values)
     train_dl, val_dl, _ = create_dataloaders(
         clean_data_path=DATA_PATH,
         batch_size=cfg.training.batch_size
     )
 
-    # 3. Initialize Model
+    # 3. Initialize model
     model = DynamicCNN(
         n_layers=cfg.model.n_layers,
         n_filters=list(cfg.model.n_filters), # Hydra uses ListConfig, convert to list
@@ -57,10 +57,10 @@ def main(cfg: DictConfig):
                 patience=3, 
             )
 
-    # 4. Init W&B using the Hydra config
+    # 4 .Init W&B using the Hydra config
     wandb_run = init_wandb_run(config=cfg, run_name=run_name)
 
-    # 5. Start Training
+    # 5 .Start training
     train_model(
         model=model,
         optimizer=optimizer,

@@ -29,6 +29,9 @@ class PokemonDataset(Dataset):
         self.transform = transform
         self.dataset = dataset_split
         self.labels = self.load_labels(self.dataset)
+        self.error_logs = []
+        self.img_dir = image_dir  
+
 
     def __len__(self) -> int:
         """

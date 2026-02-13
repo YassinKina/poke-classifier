@@ -1,7 +1,7 @@
 import torch
 from src import DynamicCNN
 from src import create_dataloaders
-from src import test_model
+from src import evaluate_model
 import yaml
 import os
 
@@ -55,7 +55,7 @@ def run_evaluation():
     # Extract only the state_dict (the weights) to load into the model
     model.load_state_dict(checkpoint['state_dict'])
     
-    labels, preds = test_model(model, test_loader, device)
+    labels, preds = evaluate_model(model, test_loader, device)
     return labels, preds
     
 

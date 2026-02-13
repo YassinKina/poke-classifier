@@ -212,7 +212,7 @@ def train_model(model: torch.nn.Module,
 
 
 @torch.no_grad()
-def test_model(model: torch.nn.Module, 
+def evaluate_model(model: torch.nn.Module, 
                test_loader: DataLoader, 
                device: torch.device,
                ) -> Tuple[np.ndarray, np.ndarray]:
