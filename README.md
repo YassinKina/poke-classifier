@@ -145,7 +145,11 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 
 `python data_setup.py`
 
-This will download, clean, and split the dataset into `data/pokemon_clean`
+This will:
+
+- Download the dataset from Hugging Face into `data/`
+- Split the dataset into train/validation/test sets
+- Save the straified dataset to `data/pokemon_clean/`
 
 ### 3. Run Hyperparameter Optimization
 
@@ -164,8 +168,11 @@ You can either:
 
 **Option B**: Override via CLI (Hydra)
 
-- Parameters in the CLI take priority over those in `config/config.yaml`
-- For example, to change the `batch_size`, `lr`, and `n_layers` hyperparameters, run: `python train.py training.batch_size=32 training.lr=0.001 model.n_layers=2`
+- Hydra allows you to override configuration parameters directly from the command line. CLI arguments take precedence over values defined in `config/config.yaml`.
+- For example, to change the `batch_size`, `lr`, and `n_layers` hyperparameters, run:
+  `python train.py training.batch_size=32 training.lr=0.001 model.n_layers=2`
+
+* This will run training using the overridden values while keeping all other configuration settings unchanged.
 
 ### 5. Run Final Evaluation
 
@@ -176,6 +183,9 @@ Load the best weights from the `models/` directory and evaluate on the hold-out 
 ### 6. Single Image Inference
 
 `python predict.py`
+
+When prompted, enter the filename of any image located in `samples/` (e.g., `golbat.png`).
+The model will output the predicted class directly in the terminal.
 
 ### Data Limitations & Notes
 
