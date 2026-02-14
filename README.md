@@ -5,10 +5,13 @@ A high-performance deep learning pipeline designed to classify 150 Pokémon spec
 ### The Problem
 
 Classifying 150 Pokémon species from a dataset with high class imbalance. Over 50% of classes in the training set have very few or no examples in test/validation splits, meaning we would be unable to accurately assess the model's performance.
+
 ![Class Imbalance](assets/original_class_splits.png)
 Even after performing a stratified split, the support of each class in the test and validation splits is quite low. Using `torchvision.transforms`for data augmentation is vital to prevent overfitting and increase effective training samples.
+
 ![Class Balance](assets/stratified_class_splits.png)
 Macro F1 can be misleading for classes with very few examples(some classes had F1 scores of 1 with ≤5 samples) Therefore, **Accuracy** is used as the primary metric.
+
 ![Perfect F1](assets/perfect_f1_support.png)
 
 ### The Results
@@ -151,7 +154,8 @@ Launches a new hyperparameter optimization study with 20 Bayesian search trials 
 
 ### 4. Train Model with Optimal Hyperparameters
 
-You can either
+You can either:
+
 **Option A**: Update the config file
 
 - Modify `config/config.yaml` with your desired hyperparameters.
