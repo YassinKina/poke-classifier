@@ -171,7 +171,7 @@ You can either:
 
 `python eval.py`
 
-Load the best weights from the `models/`directory and evaluate on the hold-out test set:
+Load the best weights from the `models/` directory and evaluate on the hold-out test set:
 
 ### 6. Single Image Inference
 
