@@ -165,7 +165,7 @@ You can either:
 **Option B**: Override via CLI (Hydra)
 
 - Parameters in the CLI take priority over those in `config/config.yaml`
-- For example, to change the `batch_size` and `lr` hyperparameters, run: `python train.py training.batch_size=32 training.lr=0.001 model.n_layers=2`
+- For example, to change the `batch_size`, `lr`, and `n_layers` hyperparameters, run: `python train.py training.batch_size=32 training.lr=0.001 model.n_layers=2`
 
 ### 5. Run Final Evaluation
 
