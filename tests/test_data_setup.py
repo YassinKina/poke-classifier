@@ -34,7 +34,7 @@ def test_download_dataset():
         mock_download.return_value = None
         
         # This call now hits the mock
-        data_setup.download_dataset(DATA_DIR)
+        data_setup.download_dataset(DATA_DIR, DATASET_PATH)
         
         # Assert that the function was called exactly once
         mock_download.assert_called_once()
@@ -64,7 +64,7 @@ def test_sanitize_dataset():
     This function is called within "split_dataset", which is tested next.
     """
     
-    cleaned_dataset = data_setup.sanitize_dataset(CLEAN_DATASET_PATH, DATA_DIR)
+    cleaned_dataset = data_setup.sanitize_dataset(DATA_DIR, DATASET_PATH, CLEAN_DATASET_PATH)
     assert cleaned_dataset is not None
     assert len(cleaned_dataset) > 0
     assert isinstance(cleaned_dataset, DatasetDict)
@@ -87,7 +87,7 @@ def test_split_dataset():
         
         # Now run your function
         # Ensure your src.data_setup is actually calling the mocked load_from_disk
-        result = data_setup.split_dataset(CLEAN_DATASET_PATH)
+        result = data_setup.split_dataset(CLEAN_DATASET_PATH, DATASET_PATH)
         
         assert isinstance(result, DatasetDict)
         mock_load.assert_called()
@@ -149,59 +149,51 @@ class DummyDataset(torch.utils.data.Dataset):
         label = torch.tensor(idx % 5)
         return image, label
 
-# -----------------------------
-# Fixtures
-# -----------------------------
-@pytest.fixture
-def mock_split_dataset():
-    return {
+
+# ____Tests for create_dataloaders____
+@patch("src.dataset.PokemonDataset")
+@patch("src.data_setup.get_train_test_transforms")
+@patch("src.data_setup.get_mean_and_std")
+@patch("src.data_setup.load_from_disk")
+def test_create_dataloaders(
+    mock_load_from_disk,
+    mock_mean_std,
+    mock_transforms,
+    mock_dataset_class,
+):
+  
+    fake_dataset = {
         "train": list(range(30)),
         "validation": list(range(10)),
         "test": list(range(15)),
     }
 
-# ____Tests for create_dataloaders____
+    # Make load_from_disk return our fake dataset
+    mock_load_from_disk.return_value = fake_dataset
 
-@patch("src.dataset.PokemonDataset")
-@patch("src.data_setup.get_train_test_transforms")
-@patch("src.data_setup.get_mean_and_std")
-@patch("src.data_setup.split_dataset")
-def test_create_dataloaders(
-    mock_split,
-    mock_mean_std,
-    mock_transforms,
-    mock_dataset_class,
-    mock_split_dataset,
-):
-    # Mock dataset split
-    mock_split.return_value = mock_split_dataset
-
-    # Mock mean/std
     mock_mean_std.return_value = ([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-
-    # Mock transforms
     mock_transforms.return_value = (None, None)
 
-    # Mock dataset class to return dummy dataset
     mock_dataset_class.side_effect = lambda dataset_split, transform: DummyDataset(len(dataset_split))
 
     batch_size = 8
     train_dl, val_dl, test_dl = data_setup.create_dataloaders("fake_path", batch_size=batch_size)
 
-    # Check types
+   
+    # DataLoader types
     assert isinstance(train_dl, DataLoader)
     assert isinstance(val_dl, DataLoader)
     assert isinstance(test_dl, DataLoader)
 
-    # Check batch size
+    # Batch size
     assert train_dl.batch_size == batch_size
     assert val_dl.batch_size == batch_size
     assert test_dl.batch_size == batch_size
 
-    # Check dataset lengths
-    assert len(train_dl.dataset) == 30
-    assert len(val_dl.dataset) == 10
-    assert len(test_dl.dataset) == 15
+    # Dataset lengths
+    assert len(train_dl.dataset) == len(fake_dataset["train"])
+    assert len(val_dl.dataset) == len(fake_dataset["validation"])
+    assert len(test_dl.dataset) == len(fake_dataset["test"])
 
 
 

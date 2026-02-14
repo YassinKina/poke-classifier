@@ -3,9 +3,10 @@ import torch
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from src import train_model, init_wandb_run
-from src import create_dataloaders
+from src import create_dataloaders, create_data_dir
 from src import DynamicCNN
 from src import set_seed
+from src import CLEAN_DATASET_PATH, DATA_DIR, DATASET_PATH
 
 def objective(trial: optuna.trial.Trial, cfg: DictConfig):
     """
@@ -31,7 +32,6 @@ def objective(trial: optuna.trial.Trial, cfg: DictConfig):
         optuna.exceptions.TrialPruned: If the trial is stopped early by an Optuna pruner.
     """
     
-    DATA_PATH = "./data/pokemon_clean"
     run_name = f"trial_{trial.number}"
     
     # 1. Suggest Hyperparameters
@@ -43,14 +43,7 @@ def objective(trial: optuna.trial.Trial, cfg: DictConfig):
     batch_size = trial.suggest_categorical("batch_size", cfg.hpo.batch_options)
     fc_size = trial.suggest_categorical("fc_size", cfg.hpo.fc_options)
     scheduler_patience = trial.suggest_int("scheduler_patience", cfg.hpo.scheduler_patience_range[0], cfg.hpo.scheduler_patience_range[1])
-    
-    # -----Keep these hyperparams constant-----
-    # # dropout = cfg.model.dropout_rate
-    # n_layers = cfg.model.n_layers
-    # batch_size = cfg.training.batch_size
-    # fc_size = cfg.model.fc_size
-    # scheduler_patience = cfg.training.scheduler_patience
-    
+      
  
     # Filters and n_layers must be equal in len
     base_filters = list(cfg.model.n_filters) # This is [32, 64, 128, 256]
@@ -73,7 +66,7 @@ def objective(trial: optuna.trial.Trial, cfg: DictConfig):
     trial_cfg = OmegaConf.create(trial_cfg)
 
     # 3. Setup objects for current trial
-    train_loader, val_loader, _ = create_dataloaders(clean_data_path=DATA_PATH, batch_size=trial_cfg.training.batch_size)
+    train_loader, val_loader, _ = create_dataloaders(clean_data_path=CLEAN_DATASET_PATH, batch_size=trial_cfg.training.batch_size)
     
     model = DynamicCNN(
         n_layers=trial_cfg.model.n_layers,
@@ -129,7 +122,9 @@ def run_hpo(cfg: DictConfig):
     """
     # Set random seed for reproducibilty 
     set_seed()
+    create_data_dir(data_dir=DATA_DIR, dataset_path=DATASET_PATH, clean_dataset_path=CLEAN_DATASET_PATH)
     
+    # Create optuna study
     study = optuna.create_study(
         direction="maximize",
         pruner=optuna.pruners.MedianPruner(

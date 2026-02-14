@@ -15,9 +15,14 @@ from src import DynamicCNN
 POKEMON_MEAN = torch.tensor([0.5863186717033386, 0.5674829483032227, 0.5336665511131287])
 POKEMON_STD = torch.tensor([0.34640103578567505, 0.33123084902763367, 0.34212544560432434])
 
-CLEAN_DATASET_PATH = os.path.join("data", "pokemon_clean")
-DATASET_PATH = os.path.join("data", "fcakyon___pokemon-classification")
-DATA_DIR = os.path.join("data")
+# Get the project root directory (parent of src/)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+CLEAN_DATASET_PATH = os.path.join(PROJECT_ROOT, "data", "pokemon_clean")
+DATASET_PATH = os.path.join(PROJECT_ROOT, "data", "fcakyon___pokemon-classification")
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "pokemon_cnn_best.pth")
+CONFIG_PATH = os.path.join(PROJECT_ROOT, "config", "config.yaml")
 
 def get_mean_and_std(dataset: Optional[Any]= None, fast: bool= True) -> Tuple[torch.Tensor, torch.Tensor]:  
     """
@@ -134,7 +139,7 @@ def set_seed(seed=42):
         seed (int, optional): Random seed that fefaults to 42.
     """
     torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed) # safe to call even on Mac
+    torch.cuda.manual_seed_all(seed) 
     np.random.seed(seed)
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
@@ -195,7 +200,7 @@ def init_wandb_run(config: DictConfig, run_name: str) -> Any:
     print("WANDB config: ", wandb.config)
     return run
     
-def get_list_labels():
+def get_class_names():
     labels = ["Golbat", "Machoke", "Omastar", "Diglett", "Lapras", "Kabuto", "Persian", "Weepinbell", "Golem", "Dodrio", "Raichu", "Zapdos", "Raticate", "Magnemite", 
     "Ivysaur", "Growlithe", "Tangela", "Drowzee", "Rapidash", "Venonat", "Pidgeot", "Nidorino", "Porygon", "Lickitung", "Rattata", "Machop", "Charmeleon", "Slowbro", "Parasect", 
     "Eevee", "Starmie", "Staryu", "Psyduck", "Dragonair", "Magikarp", "Vileplume", "Marowak", "Pidgeotto", "Shellder", "Mewtwo", "Farfetchd", "Kingler", "Seel", "Kakuna", "Doduo", 

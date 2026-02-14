@@ -1,10 +1,24 @@
 import torch
+import os
 import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
 import yaml
-from src import DynamicCNN, split_dataset, get_mean_and_std, get_train_test_transforms
 from typing import Tuple
+from src import (DynamicCNN, 
+                 split_dataset,
+                 get_mean_and_std,
+                 get_class_names,
+                 get_train_test_transforms,
+                 create_data_dir,
+                 CLEAN_DATASET_PATH,
+                 DATASET_PATH,
+                 DATA_DIR,
+                 MODEL_PATH,
+                 CONFIG_PATH
+) 
+
+
 
 def load_model(model_path: str, config_path: str, device: torch.device) -> DynamicCNN:
     """
@@ -59,23 +73,37 @@ def main():
     """
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     
+    create_data_dir(data_dir=DATA_DIR, dataset_path=DATASET_PATH, clean_dataset_path=CLEAN_DATASET_PATH)
+    
     # Get cleaned, split dataset
-    ds = split_dataset()
+    ds = split_dataset(DATA_DIR, DATASET_PATH, CLEAN_DATASET_PATH)
     mean, std = get_mean_and_std(dataset=ds["train"])
     # Load class names from the dataset metadata
-    class_names = ds['train'].features['labels'].names
+    class_names = get_class_names()
 
     # Initialize model
-    model = load_model("models/pokemon_cnn_best.pth", "config/config.yaml", device)
+    model = load_model(MODEL_PATH, CONFIG_PATH, device)
     
-    image_name = input("Enter image name: ")
-    img_path = f"samples/{image_name}" 
-    
-    name, conf = predict(img_path, model, class_names, device, mean, std)
+    # Perform prediction from user input
+    while True:
+        image_name = input("Enter any file name from the \"samples\" folder (e.g. \"golbat.png\") or \"exit\" to quit: ")
+        if image_name == "exit" or image_name == "quit":
+            break
+        img_path = f"samples/{image_name}" 
+        
+        folder_path = os.path.join("samples")
+        file_names = [f for f in os.listdir(folder_path)]
+        
+        # If image name is invalid, have user enter a new new
+        if image_name not in file_names:
+            print("Invalid image name entered, be sure to enter the full file name.")
+            continue
+        
+        name, conf = predict(img_path, model, class_names, device, mean, std)
 
-    print(f"\n--- Prediction Results ---")
-    print(f"Pokémon: {name}")
-    print(f"Confidence: {conf:.2%}")
+        print(f"\n--- Prediction Results ---")
+        print(f"Pokémon: {name}")
+        print(f"Confidence: {conf:.2%}\n")
 
 if __name__ == "__main__":
     main()

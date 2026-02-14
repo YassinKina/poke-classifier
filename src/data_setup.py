@@ -13,11 +13,10 @@ from torchvision import transforms
 from .utils import get_mean_and_std
 import glob
 from typing import Optional, Tuple, List, Union
-from src import DATASET_PATH, CLEAN_DATASET_PATH, DATA_DIR
 
 HF_DATASET = "fcakyon/pokemon-classification"
 
-def download_dataset(data_dir: str) -> None:
+def download_dataset(data_dir: str, dataset_path: str) -> None:
     """
     Downloads the Pokémon dataset from Hugging Face if it does not already exist.
 
@@ -25,15 +24,46 @@ def download_dataset(data_dir: str) -> None:
         raw_path (str): The local directory path where the dataset should be stored.
     """
     # If downloaded data already exists, no need to redownload
-    if os.path.exists(DATASET_PATH):
-        print(f"Raw dataset already exists at path {DATASET_PATH}. Skipping download.")
+    if os.path.exists(dataset_path):
         return
-    
-    os.makedirs(data_dir, exist_ok=True)
-    print("Downloading pokemon dataset...")
-    # Download dataset from HF
-    ds = load_dataset(HF_DATASET, cache_dir=data_dir, revision="refs/convert/parquet")
+
+    load_dataset(HF_DATASET, cache_dir=data_dir, revision="refs/convert/parquet")
     return
+
+def create_data_dir(data_dir: str, dataset_path: str, clean_dataset_path: str) -> None:
+    """
+    Creates data/ folder if it does not exist, then downloades the dataset
+    from Hugging Face if it does not already exist. The HF dataset is then
+    straitifed into new train, validation, and test splits. The final, cleaned
+    dataset is saved locally.
+
+    Args:
+        data_dir (str): The path of the data/ directory.
+        dataset_path (str): The path where the HF dataset is initially downloaded
+        clean_dataset_path (str): The path where the cleaned dataset is saved.
+    """
+    # Create "data/" directory
+    
+    print(f"Creating {data_dir} directory if it doesn't exist...")
+    os.makedirs(data_dir, exist_ok=True)
+
+    dataset_is_downloaded = os.path.exists(dataset_path)
+    clean_dataset_exists = os.path.exists(clean_dataset_path)
+
+    # Download data if it doesnt exist yet
+    if not dataset_is_downloaded:
+        print(f"Data not found at path {dataset_path}. Starting download...")
+        download_dataset(data_dir=data_dir, dataset_path=dataset_path)
+    else:
+        print(f"Data exists locally. Loading from path {dataset_path}")
+   
+    if not clean_dataset_exists:
+        print(f"Clean dataset not found. Running sanitization script...")
+        # Stratify dataset and save locally
+        sanitize_dataset(data_dir=data_dir, dataset_path=dataset_path, save_path=clean_dataset_path,)
+    else:
+        print(f"Clean dataset already exists at path {clean_dataset_path}. Skipping sanitization.")
+
 
 def load_local_data(dataset_path:str) -> DatasetDict:
     """
@@ -45,7 +75,6 @@ def load_local_data(dataset_path:str) -> DatasetDict:
     Raises:
         FileNotFoundError: If no .arrow files are found in the expected directory.
     """
-    
     # Look for any .arrow files recursively within that folder
     arrow_files = glob.glob(os.path.join(dataset_path, "**/*.arrow"), recursive=True)
     
@@ -96,7 +125,7 @@ def view_dataset(ds: DatasetDict, split: str = "train", idx: Optional[int] = Non
     plt.axis('off')
     plt.show()
 
-def sanitize_dataset(save_path: str, dataset_path: str) -> DatasetDict:
+def sanitize_dataset(data_dir: str, dataset_path: str, save_path: str,) -> DatasetDict:
     """
     Performs global deduplication across all splits and re-stratifies the data into 80/10/10 splits.
 
@@ -125,7 +154,7 @@ def sanitize_dataset(save_path: str, dataset_path: str) -> DatasetDict:
     
     # Export images to one temp folder for the CNN
     temp_dir_imgs = "temp_images_global"
-    temp_dir = os.path.join(DATA_DIR, temp_dir_imgs)
+    temp_dir = os.path.join(data_dir, temp_dir_imgs)
     os.makedirs(temp_dir, exist_ok=True)
     
     for idx, example in enumerate(combined_ds):
@@ -164,7 +193,7 @@ def sanitize_dataset(save_path: str, dataset_path: str) -> DatasetDict:
     return final_ds
 
 
-def split_dataset(cleaned_path: str = "data/pokemon_clean") -> DatasetDict:
+def split_dataset(data_dir:str, dataset_path:str, cleaned_path:str ) -> DatasetDict:
     """
     Loads a cleaned dataset if available; otherwise, handles downloading and sanitization.
 
@@ -174,24 +203,20 @@ def split_dataset(cleaned_path: str = "data/pokemon_clean") -> DatasetDict:
     Returns:
         DatasetDict: The master sanitized dataset containing all splits.
     """
-
-    raw_path = os.path.join("data", "fcakyon___pokemon-classification")
     
     # Create cleaned dataset with balanced labels representation
     if not os.path.exists(cleaned_path):
-        if not os.path.exists(raw_path):
+        if not os.path.exists(dataset_path):
             print("Raw dataset not found. Downloading data")
-            download_dataset(raw_path)
+            download_dataset(data_dir=data_dir, dataset_path=dataset_path)
             
         print("Clean dataset not found. Running sanitization script...")
-        ds = sanitize_dataset(save_path=CLEAN_DATASET_PATH, dataset_path=DATASET_PATH)
+        ds = sanitize_dataset(data_dir=data_dir, dataset_path=dataset_path, save_path=cleaned_path)
     else:
         # Load the master sanitized dataset
         print(f"Loading cleaned data from {cleaned_path}")
         ds = load_from_disk(cleaned_path)
         
-    # If we already have a DatasetDict, return
-    print(f"Final Counts -> Train: {len(ds['train'])}, Val: {len(ds['validation'])}, Test: {len(ds['test'])}")
     return ds
     
 def get_train_test_transforms(mean: Union[List[float], Tuple[float, ...]], std: Union[List[float], Tuple[float, ...]]) -> Tuple[transforms.Compose, transforms.Compose]:
@@ -245,8 +270,8 @@ def create_dataloaders(clean_data_path: str, batch_size: int = 64) -> Tuple[Data
         Tuple[DataLoader, DataLoader, DataLoader]: (train_loader, val_loader, test_loader).
     """
     from .dataset import PokemonDataset
-    # Saved dataset is unsplit, so must split it first
-    dataset = split_dataset(clean_data_path)
+    ### JUST NEED LOAD LOAD IT, NOT SPLIT
+    dataset = load_from_disk(clean_data_path)
  
     # Calculate the stats using this un-normalized data
     train_mean, train_std = get_mean_and_std(dataset=dataset["train"])
@@ -280,4 +305,3 @@ def verify_dataloaders(train_dl: DataLoader) -> None:
     print(f"Batch Label Shape: {labels.shape}")
     print(f"Label Data Type: {labels.dtype}")
     print(f"Image Pixel Range: Min={images.min():.2f}, Max={images.max():.2f}")
-

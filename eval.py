@@ -4,6 +4,7 @@ from src import create_dataloaders
 from src import evaluate_model
 import yaml
 import os
+from src import create_data_dir, CLEAN_DATASET_PATH, CONFIG_PATH, MODEL_PATH, DATA_DIR, DATASET_PATH
 
 def run_evaluation():
     """
@@ -25,18 +26,18 @@ def run_evaluation():
         
     """
     # Ensure correct path is used regardless of directory from which code is executed
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(current_dir, "config", "config.yaml")
-    cleaned_data_path = os.path.join(current_dir, "data", "pokemon_clean")
+    # current_dir = os.path.dirname(os.path.abspath(__file__))
+    create_data_dir(data_dir=DATA_DIR, dataset_path=DATASET_PATH, clean_dataset_path=CLEAN_DATASET_PATH)
+
 
     # 1. Load config to get hyperparameters
-    with open(config_path, "r") as f:
+    with open(CONFIG_PATH, "r") as f:
         cfg = yaml.safe_load(f)
 
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
     # 2. Get the Test DataLoader
-    _, _, test_loader = create_dataloaders(clean_data_path=cleaned_data_path, batch_size=32)
+    _, _, test_loader = create_dataloaders(clean_data_path=CLEAN_DATASET_PATH, batch_size=32)
 
     # 3. Initialize 
     model = DynamicCNN(
@@ -49,15 +50,14 @@ def run_evaluation():
     ).to(device)
     
     # Load the whole dictionary
-    model_path = os.path.join(current_dir, "models", "pokemon_cnn_best.pth")
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(MODEL_PATH, map_location=device)
 
     # Extract only the state_dict (the weights) to load into the model
     model.load_state_dict(checkpoint['state_dict'])
     
     labels, preds = evaluate_model(model, test_loader, device)
     return labels, preds
-    
+
 
 if __name__ == "__main__":
     run_evaluation()

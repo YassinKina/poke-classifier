@@ -110,7 +110,6 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 ## Project Structure
 
 ```text
-|── download_data.py    # Downloads, cleans, and splits the dataset
 ├── app.py              # Interactive Streamlit Web Application
 ├── train.py            # Main training script for single-run execution
 ├── hpo.py              # Optuna optimization entry point (Bayesian Search)
@@ -141,23 +140,13 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 
 `pip install -r requirements.txt`
 
-### 2. Download Data
-
-`python data_setup.py`
-
-This will:
-
-- Download the dataset from Hugging Face into `data/`
-- Split the dataset into train/validation/test sets
-- Save the straified dataset to `data/pokemon_clean/`
-
-### 3. Run Hyperparameter Optimization
+### 2. Run Hyperparameter Optimization
 
 `python hpo.py`
 
 Launches a new hyperparameter optimization study with 20 Bayesian search trials by default (configurable in `config/config.yaml`).
 
-### 4. Train Model with Optimal Hyperparameters
+### 3. Train Model with Optimal Hyperparameters
 
 You can either:
 
@@ -174,13 +163,13 @@ You can either:
 
 * This will run training using the overridden values while keeping all other configuration settings unchanged.
 
-### 5. Run Final Evaluation
+### 4. Run Final Evaluation
 
 `python eval.py`
 
 Load the best weights from the `models/` directory and evaluate on the hold-out test set:
 
-### 6. Single Image Inference
+### 5. Single Image Inference
 
 `python predict.py`
 

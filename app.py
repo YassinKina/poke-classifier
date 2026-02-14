@@ -5,7 +5,7 @@ from PIL import Image
 import yaml
 from src.model import DynamicCNN
 from src.data_setup import get_train_test_transforms, get_mean_and_std
-from src. utils import get_list_labels
+from src. utils import get_class_names
 from huggingface_hub import hf_hub_download
 
 # --- CONFIGURATION ---
@@ -66,7 +66,7 @@ def load_model(repo_id: str, filename: str, config_path: str):
     return model, device
 
 model, DEVICE = load_model(REPO_ID, FILENAME, CONFIG_PATH)
-CLASS_NAMES = get_list_labels()
+CLASS_NAMES = get_class_names()
 mean, std = get_mean_and_std()
 _, test_transform = get_train_test_transforms(mean=mean, std=std)
 
