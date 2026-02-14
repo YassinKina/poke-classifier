@@ -110,7 +110,7 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 ## Project Structure
 
 ```text
-
+|── download_data.py    # Downloads, cleans, and splits the dataset
 ├── app.py              # Interactive Streamlit Web Application
 ├── train.py            # Main training script for single-run execution
 ├── hpo.py              # Optuna optimization entry point (Bayesian Search)
@@ -118,7 +118,7 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 ├── predict.py          # CLI tool for single-image inference
 ├── config/             # Hydra YAML configurations
 │   ├── config.yaml     # Default training settings
-├── data/               # Pokémon dataset (Cleaned & Preprocessed)
+├── data/               # Auto-generated dataset directory (ignored by git)
 ├── models/             # Saved checkpoints (.pth files + training metadata)
 ├── notebooks/          # Jupyter notebooks for EDA
 |    |── EDA.ipynb
@@ -131,6 +131,7 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 │   ├── model.py        # DynamicCNN architecture definition
 │   ├── engine.py       # Core Train/Val/Top-K Evaluation loops
 │   └── utils.py        # Logging, W&B setup, and stat calculations
+|── .gitignore          # Tracks ignored files
 └── requirements.txt    # Project dependencies
 ```
 
