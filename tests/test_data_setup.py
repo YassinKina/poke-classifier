@@ -9,9 +9,7 @@ from PIL import Image
 import numpy as np
 from torchvision import transforms
 from torch.utils.data import DataLoader
-from src import PokemonDataset
-
-
+from src import PokemonDataset, DATA_DIR, DATASET_PATH, CLEAN_DATASET_PATH
 
 TRAIN_DATA_ROWS = 4672
 VAL_DATA_ROWS = 584
@@ -22,8 +20,7 @@ POKEMON_MEAN = torch.tensor([0.5863186717033386, 0.5674829483032227, 0.533666551
 POKEMON_STD = torch.tensor([0.34640103578567505, 0.33123084902763367, 0.34212544560432434])
 
 
-DATA_DIR = "data"
-CLEAN_DATA_PATH = os.path.join(DATA_DIR, "pokemon_clean")
+
 
 
 def test_download_dataset():
@@ -67,7 +64,7 @@ def test_sanitize_dataset():
     This function is called within "split_dataset", which is tested next.
     """
     
-    cleaned_dataset = data_setup.sanitize_dataset(CLEAN_DATA_PATH, DATA_DIR)
+    cleaned_dataset = data_setup.sanitize_dataset(CLEAN_DATASET_PATH, DATA_DIR)
     assert cleaned_dataset is not None
     assert len(cleaned_dataset) > 0
     assert isinstance(cleaned_dataset, DatasetDict)
@@ -90,7 +87,7 @@ def test_split_dataset():
         
         # Now run your function
         # Ensure your src.data_setup is actually calling the mocked load_from_disk
-        result = data_setup.split_dataset(CLEAN_DATA_PATH)
+        result = data_setup.split_dataset(CLEAN_DATASET_PATH)
         
         assert isinstance(result, DatasetDict)
         mock_load.assert_called()

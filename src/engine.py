@@ -8,6 +8,8 @@ from torch.utils.data import DataLoader
 import numpy as np
 from typing import Tuple, Optional, Any
 
+SAVE_PATH = "models/pokemon_cnn_best.pth"
+
 def train_epoch(model: torch.nn.Module, 
                 train_dataloader: DataLoader, 
                 optimizer: torch.optim.Optimizer, 
@@ -182,7 +184,6 @@ def train_model(model: torch.nn.Module,
         # Save checkpoint if model is performing better than previously
         if top1_val_acc > best_val_acc:
             best_val_acc = top1_val_acc
-            save_path = "models/pokemon_cnn_best.pth"
             os.makedirs("models", exist_ok=True)
             
             checkpoint = {
@@ -192,7 +193,7 @@ def train_model(model: torch.nn.Module,
                 'epoch': epoch,
                 'run_id': wandb.run.id if wandb.run else None  
             }
-            torch.save(checkpoint, save_path)
+            torch.save(checkpoint, SAVE_PATH)
             
         # Prune optuna trial if it is performing poorly    
         if trial is not None:

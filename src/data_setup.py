@@ -6,13 +6,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 from collections import defaultdict
-# from imagededup.methods import CNN
+from imagededup.methods import CNN
 from pathlib import Path
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from .utils import get_mean_and_std
 import glob
 from typing import Optional, Tuple, List, Union
+from src import DATASET_PATH, CLEAN_DATASET_PATH, DATA_DIR
+
+HF_DATASET = "fcakyon/pokemon-classification"
 
 def download_dataset(data_dir: str) -> None:
     """
@@ -21,19 +24,18 @@ def download_dataset(data_dir: str) -> None:
     Args:
         raw_path (str): The local directory path where the dataset should be stored.
     """
-    
-    search_path = os.path.join(data_dir, "fcakyon___pokemon-classification")
-    if os.path.exists(search_path):
-        print(f"Raw dataset already exists at path {search_path}. Skipping download.")
+    # If downloaded data already exists, no need to redownload
+    if os.path.exists(DATASET_PATH):
+        print(f"Raw dataset already exists at path {DATASET_PATH}. Skipping download.")
         return
     
     os.makedirs(data_dir, exist_ok=True)
     print("Downloading pokemon dataset...")
     # Download dataset from HF
-    ds = load_dataset("fcakyon/pokemon-classification", cache_dir=data_dir, revision="refs/convert/parquet")
+    ds = load_dataset(HF_DATASET, cache_dir=data_dir, revision="refs/convert/parquet")
     return
 
-def load_local_data(data_dir:str) -> DatasetDict:
+def load_local_data(dataset_path:str) -> DatasetDict:
     """
     Locates and loads local .arrow files into a Hugging Face DatasetDict.
 
@@ -44,11 +46,8 @@ def load_local_data(data_dir:str) -> DatasetDict:
         FileNotFoundError: If no .arrow files are found in the expected directory.
     """
     
-    # Use the root of your data directory
-    base_search_path = os.path.join(data_dir, "fcakyon___pokemon-classification")
-    
     # Look for any .arrow files recursively within that folder
-    arrow_files = glob.glob(os.path.join(base_search_path, "**/*.arrow"), recursive=True)
+    arrow_files = glob.glob(os.path.join(dataset_path, "**/*.arrow"), recursive=True)
     
     # Map .arrow files into splits
     data_files = {}
@@ -58,7 +57,7 @@ def load_local_data(data_dir:str) -> DatasetDict:
         elif "test" in f: data_files["test"] = f
 
     if not data_files:
-        raise FileNotFoundError(f"No .arrow files found in {base_search_path}. Check if the download actually completed.")
+        raise FileNotFoundError(f"No .arrow files found in {dataset_path}. Check if the download actually completed.")
 
     print(f"Found local data files: {list(data_files.keys())}")
     return load_dataset("arrow", data_files=data_files)
@@ -97,7 +96,7 @@ def view_dataset(ds: DatasetDict, split: str = "train", idx: Optional[int] = Non
     plt.axis('off')
     plt.show()
 
-def sanitize_dataset(save_path: str, data_dir: str) -> DatasetDict:
+def sanitize_dataset(save_path: str, dataset_path: str) -> DatasetDict:
     """
     Performs global deduplication across all splits and re-stratifies the data into 80/10/10 splits.
 
@@ -114,8 +113,7 @@ def sanitize_dataset(save_path: str, data_dir: str) -> DatasetDict:
         return final_ds
  
     #  Load the existing arrow files (which currently have duplicates and augmentations)
-    ds_full_dict = load_local_data(data_dir=data_dir)
-    
+    ds_full_dict = load_local_data(dataset_path=dataset_path)
     
     # Flatten into one single Dataset
     print("Combining all splits and removing duplicate/augmented images...")
@@ -127,7 +125,7 @@ def sanitize_dataset(save_path: str, data_dir: str) -> DatasetDict:
     
     # Export images to one temp folder for the CNN
     temp_dir_imgs = "temp_images_global"
-    temp_dir = os.path.join(data_dir, temp_dir_imgs)
+    temp_dir = os.path.join(DATA_DIR, temp_dir_imgs)
     os.makedirs(temp_dir, exist_ok=True)
     
     for idx, example in enumerate(combined_ds):
@@ -186,7 +184,7 @@ def split_dataset(cleaned_path: str = "data/pokemon_clean") -> DatasetDict:
             download_dataset(raw_path)
             
         print("Clean dataset not found. Running sanitization script...")
-        ds = sanitize_dataset(save_path="data/pokemon_clean")
+        ds = sanitize_dataset(save_path=CLEAN_DATASET_PATH, dataset_path=DATASET_PATH)
     else:
         # Load the master sanitized dataset
         print(f"Loading cleaned data from {cleaned_path}")

@@ -15,6 +15,10 @@ from src import DynamicCNN
 POKEMON_MEAN = torch.tensor([0.5863186717033386, 0.5674829483032227, 0.5336665511131287])
 POKEMON_STD = torch.tensor([0.34640103578567505, 0.33123084902763367, 0.34212544560432434])
 
+CLEAN_DATASET_PATH = os.path.join("data", "pokemon_clean")
+DATASET_PATH = os.path.join("data", "fcakyon___pokemon-classification")
+DATA_DIR = os.path.join("data")
+
 def get_mean_and_std(dataset: Optional[Any]= None, fast: bool= True) -> Tuple[torch.Tensor, torch.Tensor]:  
     """
     Calculates the channel-wise mean and standard deviation for the dataset.

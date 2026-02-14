@@ -1,25 +1,29 @@
 # Pokémon Image Classifier: Dynamic CNN with Hyperparameter Optimization
 
-A high-performance deep learning pipeline designed to classify 150 Pokémon species. This project implements a custom **DynamicCNN** architecture that allows for automated architectural searches, combined with a **Hyperparameter Optimization** (HPO) workflow.
+A high-performance deep learning pipeline designed to classify 150 Pokémon species. This project implements a custom **DynamicCNN** architecture that can adapt its layer configuration during training, enabling automated architectural search combined with a **Hyperparameter Optimization** (HPO) workflow.
 
 ### The Problem
 
-Classifying 150 Pokémon species from a dataset with high class imbalance. More than 50% of training labels are not present in the test and validation sets, meaning we would be unable to accurately assess the model's performance.
+Classifying 150 Pokémon species from a dataset with high class imbalance. Over 50% of classes in the training set have very few or no examples in test/validation splits, meaning we would be unable to accurately assess the model's performance.
 ![Class Imbalance](assets/original_class_splits.png)
-
-### The Solution
-
-Prior to training the model, we must utilize stratifed data splitting to ensure all 150 classes appear in each dataset split. Additionally, we compose data augmentations with `torchvision.Transforms` to provide the model with enough samples to learn from the data, prevent overfitting, and so that we can accurately evaluate the model's performance.
+Even after performing a stratified split, the support of each class in the test and validation splits is quite low. Using `torchvision.transforms`for data augmentation is vital to prevent overfitting and increase effective training samples.
 ![Class Balance](assets/stratified_class_splits.png)
+Macro F1 can be misleading for classes with very few examples(some classes had F1 scores of 1 with ≤5 samples) Therefore, **Accuracy** is used as the primary metric.
+![Perfect F1](assets/perfect_f1_support.png)
 
 ### The Results
 
-- **Top-1 Accuracy:** `67.86%` (Exact Pokemon match)
-- **Top-5 Accuracy:** `89.40%` (Correct Pokemon is within top 5 candidates)
+| Metric         | Value  |
+| -------------- | ------ |
+| Top-1 Accuracy | 67.86% |
+| Top-5 Accuracy | 89.40% |
+| Macro F1       | 68.85% |
+
+_Note: Due to high class imbalance and very low support in some classes, the Macro F1 score is likely artificially inflated._
+
+###
+
 ---
-
-
-
 
 ### Live Demo
 
@@ -27,10 +31,10 @@ Prior to training the model, we must utilize stratifed data splitting to ensure 
 
 _Upload your own Pokémon image or choose from a curated sample gallery to see the model's Top-5 predictions in real-time._
 
-
 ### Model Architecture
 
 The model is a **Dynamic Convolutional Neural Network** consisting of four sequential feature extraction blocks followed by a fully connected classification head.
+
 <details>
 <summary>Click to view detailed layer-by-layer summary</summary>
 
@@ -71,28 +75,31 @@ Estimated Total Size (MB): 256.48
 
 </details>
 
-
 ## Features
 
 ### 1. Dynamic Architecture
 
 The `DynamicCNN` is a flexible PyTorch implementation that adapts to configuration-driven depth and width:
 
-- **Variable Depth:** Supports dynamic `n_layers` configuration via Hydra.
-- **Adaptive Width:** Adjusts `n_filters` and `fc_size` based on Optuna suggestions.
-- **Regularization:** Integrated Dropout, Batch Normalization, and Weight Decay to combat overfitting on a domain-specific dataset.
+- **Customizable Convolutional Blocks**: Supports `n_layers` convolutional blocks with configurable `n_filters` and `kernel_sizes` per block. Each block includes Conv2d → BatchNorm → ReLU → MaxPool.
+
+- **Automatic Classifier Sizing**: Dynamically calculates the flattened feature map size after the convolutional layers, so the fully connected classifier automatically adapts to any configuration or input image size.
+
+- **Built-in Regularization:** Includes Dropout in the fully connected layers and Batch Normalization in the convolutional blocks to reduce overfitting on small or imbalanced datasets.
+
+- **Flexible Fully Connected Head**: `fc_size` is configurable, allowing easy scaling of the classifier complexity to match dataset size or computational budget.
 
 ### 2. Automated HPO Workflow
 
 Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dimensional search space:
 
-- **Optimizer Params:** Learning Rate ($10^{-5}$ to $10^{-3}$), Weight Decay ($10^{-6}$ to $10^{-4}$).
-- **Regularization:** Adaptive Dropout rates and Label Smoothing (up to $0.2$).
-- **Early Stopping:** `MedianPruner` terminates underperforming trials early to optimize compute resources.
+- **Regularization:** Adaptive Dropout rates and Label Smoothing (up to $0.2$) are explored automatically.
+- **Early Stopping:** `MedianPruner` terminates underperforming trials early to save compute resources.
+- **Saved Optimal Hyperparameters:** After 50 Optuna trials, the best hyperparameters are saved in `config/config.yaml` for direct use or further fine-tuning.
 
 ### 3. Professional Experiment Tracking
 
-- **Weights & Biases (W&B):** Real-time logging of training/validation loss, Top-1/Top-5 accuracy, and gradient distributions.
+- **Weights & Biases (W&B):** Real-time logging of training/validation loss, Top-1/Top-5 accuracy, and gradient distributions for reproducible experiments.
 - **Hydra:** Version-controlled configuration management for reproducible experiments.
 
 ---
@@ -128,34 +135,54 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 
 ### 1. Installation
 
-`pip install requirements.txt`
+`pip install -r requirements.txt`
 
-### 2. Run Hyperparameter Optimization
+### 2. Download Data
 
-Launches a new study (of 20 trials) with Bayesian search
+Project requires that `data/pokemon_clean` is downloaded.
+
+`python data_setup.py`
+
+### 3. Run Hyperparameter Optimization
+
+Launches a new hyperparameter optimization study with 20 Bayesian search trials by default (configurable in `config/config.yaml`).
+
 `python hpo.py`
 
-### 3. Run Final Evaluation
+### 4. Train Model with Optimal Hyperparameters
 
-Load the best weights from the `models/ `directory and evaluate on the hold-out test set:
+You can either
+**Option A**: Update the config file
+
+- Modify `config/config.yaml` with your desired hyperparameters.
+- Then run `python train.py`
+
+**Option B**: Override via CLI (Hydra)
+
+- Parameters in the CLI take priority over those in `config/config.yaml`
+- For example, to change the `batch_size` and `lr` hyperparameters, run: `python train.py training.batch_size=32 training.lr=0.001 model.n_layers=2`
+
+### 5. Run Final Evaluation
+
+Load the best weights from the `models/`directory and evaluate on the hold-out test set:
+
 `python eval.py`
 
-### 4. Single Image Inference
+### 6. Single Image Inference
 
 `python predict.py`
 
+### Data Limitations & Notes
 
-### Data Limitaions & Notes
-
+- The number of training images in the [fcakyon/pokemon-classification](https://huggingface.co/datasets/fcakyon/pokemon-classification) dataset was reduced to fewer than 5,000 after using a pretrained CNN to remove augmented or duplicate images.
 - Pokémon cards all look quite similar, and as a result the model struggles when the sample is a picture of a Pokémon card
-- Inequality in the representation of some labels
-- The training images in the cakyon\_\_\_pokemon-classification
-  dataset were less than 5,000, as I used a pretrained CNN to remove any augmented/duplicate images in the initial dataset
 - Model will always give a prediction, even on Pokémon it was not trained on
 - Dataset does not include Nidoran, both male and female versions
 - Dataset includes Alolan Sandslash from Generation VI
 
+---
+
 ### In Progress
 
 - Hyperparameter analysis
-- Fine tune a pretrained ResNet model on the same dataset and compare the performance of the two models
+- Fine-tune a pretrained ResNet-18 model on the same dataset and compare the performance of the two models
