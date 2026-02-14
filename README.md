@@ -10,7 +10,7 @@ Classifying 150 Pokémon species from a dataset with high class imbalance. Over 
 Even after performing a stratified split, the support of each class in the test and validation splits is quite low. Using `torchvision.transforms`for data augmentation is vital to prevent overfitting and increase effective training samples.
 
 ![Class Balance](assets/stratified_class_splits.png)
-Macro F1 can be misleading for classes with very few examples(some classes had F1 scores of 1 with ≤5 samples) Therefore, **Accuracy** is used as the primary metric.
+Macro F1 can be misleading for classes with very few examples(some classes had F1 scores of 1 with ≤ 5 samples) Therefore, **Accuracy** is used as the primary metric.
 
 ![Perfect F1](assets/perfect_f1_support.png)
 
@@ -32,7 +32,7 @@ _Note: Due to high class imbalance and very low support in some classes, the Mac
 
 <a href="https://poke-classifier-pytorch.streamlit.app/" target="_blank" rel="noopener noreferrer">Check out the interactive web app here!</a>
 
-_Upload your own Pokémon image or choose from a curated sample gallery to see the model's Top-5 predictions in real-time._
+_Upload your own Pokémon image or choose from a sample gallery to see the model's Top-5 predictions in real-time._
 
 ### Model Architecture
 
@@ -96,7 +96,7 @@ The `DynamicCNN` is a flexible PyTorch implementation that adapts to configurati
 
 Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dimensional search space:
 
-- **Regularization:** Adaptive Dropout rates and Label Smoothing (up to $0.2$) are explored automatically.
+- **Regularization:** Adaptive Dropout rates and Label Smoothing are explored automatically.
 - **Early Stopping:** `MedianPruner` terminates underperforming trials early to save compute resources.
 - **Saved Optimal Hyperparameters:** After 50 Optuna trials, the best hyperparameters are saved in `config/config.yaml` for direct use or further fine-tuning.
 
@@ -143,15 +143,15 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 
 ### 2. Download Data
 
-Project requires that `data/pokemon_clean` is downloaded.
-
 `python data_setup.py`
+
+This will download, clean, and split the dataset into `data/pokemon_clean`
 
 ### 3. Run Hyperparameter Optimization
 
-Launches a new hyperparameter optimization study with 20 Bayesian search trials by default (configurable in `config/config.yaml`).
-
 `python hpo.py`
+
+Launches a new hyperparameter optimization study with 20 Bayesian search trials by default (configurable in `config/config.yaml`).
 
 ### 4. Train Model with Optimal Hyperparameters
 
@@ -169,9 +169,9 @@ You can either:
 
 ### 5. Run Final Evaluation
 
-Load the best weights from the `models/`directory and evaluate on the hold-out test set:
-
 `python eval.py`
+
+Load the best weights from the `models/`directory and evaluate on the hold-out test set:
 
 ### 6. Single Image Inference
 

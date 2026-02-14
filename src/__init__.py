@@ -17,6 +17,4 @@ from .data_setup import ( create_dataloaders,
                          download_dataset)
 
 from .engine import train_model, evaluate_model
-
-
 from .dataset import PokemonDataset
