@@ -182,6 +182,7 @@ def train_model(model: torch.nn.Module,
                 "val/top5_acc": top5_val_acc,      
                 "train/lr": current_lr
             })
+            
         # Save checkpoint if model is performing better than previously
         if top1_val_acc > best_val_acc:
             best_val_acc = top1_val_acc
