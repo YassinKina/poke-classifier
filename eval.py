@@ -25,11 +25,7 @@ def run_evaluation():
             - preds (np.ndarray): The model's predicted class labels.
         
     """
-    # Ensure correct path is used regardless of directory from which code is executed
-    # current_dir = os.path.dirname(os.path.abspath(__file__))
     create_data_dir(data_dir=DATA_DIR, dataset_path=DATASET_PATH, clean_dataset_path=CLEAN_DATASET_PATH)
-
-
     # 1. Load config to get hyperparameters
     with open(CONFIG_PATH, "r") as f:
         cfg = yaml.safe_load(f)
@@ -56,6 +52,7 @@ def run_evaluation():
     model.load_state_dict(checkpoint['state_dict'])
     
     labels, preds = evaluate_model(model, test_loader, device)
+    logger.info("Model evaluation completed")
     return labels, preds
 
 

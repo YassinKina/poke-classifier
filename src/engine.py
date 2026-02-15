@@ -1,4 +1,4 @@
-from .utils import NestedProgressBar, get_best_val_accuracy, flatten_config, get_num_correct_in_top5, init_wandb_run
+
 import torch
 import os
 import wandb
@@ -7,8 +7,11 @@ import optuna
 from torch.utils.data import DataLoader
 import numpy as np
 from typing import Tuple, Optional, Any
+from .utils import ( NestedProgressBar,
+                    get_best_val_accuracy, 
+                    get_num_correct_in_top5, 
+                    MODEL_PATH)
 
-SAVE_PATH = "models/pokemon_cnn_best.pth"
 
 def train_epoch(model: torch.nn.Module, 
                 train_dataloader: DataLoader, 
@@ -153,23 +156,23 @@ def train_model(model: torch.nn.Module,
         mode="train",
         use_notebook=False
     )
+    #Get accuracy from the saved model with the highest accuracy
     best_val_acc = get_best_val_accuracy()
-    print("BEST VAL ACC: ", best_val_acc) # delete this after verifying
     
     for epoch in range(n_epochs):
         pbar.update_epoch(epoch + 1)
         
         train_loss, top1_train_acc, top5_train_acc = train_epoch(model, train_dataloader, optimizer, loss_func, device, pbar)
         val_loss, top1_val_acc, top5_val_acc = validate_epoch(model, val_dataloader, loss_func, device)
-        
         scheduler.step(val_loss)
         
         status_msg = f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} Train Acc: {top1_train_acc:.2%} Train Top 5 Acc: {top5_train_acc:.2%} | "\
                                         f" Val Loss: {val_loss:.4f} Val Acc: {top1_val_acc:.2%} Val Top 5 Acc: {top5_val_acc:.2%} "
+        #
         pbar.maybe_log_epoch(epoch + 1, message=status_msg)
         
         current_lr = optimizer.param_groups[0]['lr']
-        
+        # Log model performance in Weights and Biases
         if wandb_run is not None:
             wandb_run.log({
                 "epoch": epoch + 1,
@@ -193,19 +196,21 @@ def train_model(model: torch.nn.Module,
                 'epoch': epoch,
                 'run_id': wandb.run.id if wandb.run else None  
             }
-            torch.save(checkpoint, SAVE_PATH)
+            torch.save(checkpoint, MODEL_PATH)
             
-        # Prune optuna trial if it is performing poorly    
+           
         if trial is not None:
             trial.report(top1_val_acc, epoch)
-            
+        # Prune optuna trial if it is performing poorly 
             if trial.should_prune():
                 if wandb_run is not None:
+                  
                     wandb_run.tags = wandb_run.tags + ("pruned",)
                     wandb_run.finish() 
                 raise optuna.exceptions.TrialPruned()
         
     pbar.close("Training complete!\n")
+    
     if wandb_run is not None:
         wandb_run.finish()
         

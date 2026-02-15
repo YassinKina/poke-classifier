@@ -26,9 +26,12 @@ def main(cfg: DictConfig):
     Returns:
         None
     """
+   
+    
+    # Set random seed for reproducability 
     set_seed()
     
-    # Use Hydra to get the project root, ensuring paths are absolute
+    # Get the project root, ensuring paths are absolute
     original_cwd = get_original_cwd()
     data_dir = os.path.join(original_cwd, "data")
     dataset_path = os.path.join(data_dir, "fcakyon___pokemon-classification")

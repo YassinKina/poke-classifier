@@ -135,9 +135,6 @@ def run_hpo(cfg: DictConfig):
     
     # Pass Hydra cfg into the objective
     study.optimize(lambda trial: objective(trial, cfg), n_trials=cfg.hpo.n_trials)
-    
-    print(f"Best value: {study.best_value}")
-    print(f"Best params: {study.best_params}")
 
 if __name__ == "__main__":
     run_hpo()

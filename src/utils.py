@@ -212,9 +212,6 @@ def get_class_names():
     "Ditto", "Victreebel", "Omanyte", "Horsea", "Pikachu", "Blastoise", "Venomoth", "Charizard", "Seadra", "Muk", "Spearow", "Bulbasaur", "Bellsprout", "Electrode", "Gloom", "Poliwhirl", "Flareon",
     "Seaking", "Hypno", "Wartortle", "Mankey", "Tentacool", "Exeggcute", "Meowth"]
     return labels
-
-
-    
     
 class NestedProgressBar:
     """A handler for nested tqdm progress bars for training and evaluation loops.

@@ -56,13 +56,16 @@ def create_data_dir(data_dir: str, dataset_path: str, clean_dataset_path: str) -
         download_dataset(data_dir=data_dir, dataset_path=dataset_path)
     else:
         print(f"Data exists locally. Loading from path {dataset_path}")
-   
+
+    # If cleaned data doesnt exist, clean it
     if not clean_dataset_exists:
         print(f"Clean dataset not found. Running sanitization script...")
         # Stratify dataset and save locally
-        sanitize_dataset(data_dir=data_dir, dataset_path=dataset_path, save_path=clean_dataset_path,)
+        sanitize_dataset(data_dir=data_dir, dataset_path=dataset_path, save_path=clean_dataset_path)
     else:
         print(f"Clean dataset already exists at path {clean_dataset_path}. Skipping sanitization.")
+    
+
 
 
 def load_local_data(dataset_path:str) -> DatasetDict:
