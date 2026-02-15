@@ -144,7 +144,7 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 
 `python hpo.py`
 
-Launches a new hyperparameter optimization study with 20 Bayesian search trials by default (configurable in `config/config.yaml`).
+Launches a new hyperparameter optimization study with 20 Bayesian search trials by default (configurable in `config/config.yaml`). The dataset is automatically downloaded if not already present.
 
 ### 3. Train Model with Optimal Hyperparameters
 
