@@ -5,14 +5,14 @@ from PIL import Image
 import yaml
 from src.model import DynamicCNN
 from src.data_setup import get_train_test_transforms, get_mean_and_std
-from src. utils import get_class_names
+from src.utils import get_class_names
 from huggingface_hub import hf_hub_download
+from src.paths import CONFIG_PATH
 
 # --- CONFIGURATION ---
 REPO_ID = "yassinkina/pokemon-cnn"
 SAMPLES_DIR = "samples/"
 FILENAME = "pokemon_cnn_best.pth"
-CONFIG_PATH = "config/config.yaml"
 
 # --- CALLBACKS FOR MUTUAL EXCLUSION ---
 def on_upload_change():

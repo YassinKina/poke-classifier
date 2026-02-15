@@ -2,11 +2,11 @@ import optuna
 import torch
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from src import train_model, init_wandb_run
-from src import create_dataloaders, create_data_dir
-from src import DynamicCNN
-from src import set_seed
-from src import CLEAN_DATASET_PATH, DATA_DIR, DATASET_PATH
+from src.engine import train_model
+from src.data_setup import create_dataloaders, create_data_dir
+from src.model import DynamicCNN
+from src.utils import set_seed, init_wandb_run
+from src.paths import CLEAN_DATASET_PATH, DATA_DIR, DATASET_PATH
 
 def objective(trial: optuna.trial.Trial, cfg: DictConfig):
     """

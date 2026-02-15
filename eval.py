@@ -1,10 +1,10 @@
 import torch
-from src import DynamicCNN
-from src import create_dataloaders
-from src import evaluate_model
 import yaml
 import os
-from src import create_data_dir, CLEAN_DATASET_PATH, CONFIG_PATH, MODEL_PATH, DATA_DIR, DATASET_PATH
+from src.model import DynamicCNN
+from src.data_setup import create_dataloaders, create_data_dir
+from src.engine import evaluate_model
+from src.paths import CLEAN_DATASET_PATH, CONFIG_PATH, MODEL_PATH, DATA_DIR, DATASET_PATH
 
 def run_evaluation():
     """
@@ -30,7 +30,7 @@ def run_evaluation():
     with open(CONFIG_PATH, "r") as f:
         cfg = yaml.safe_load(f)
 
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
     # 2. Get the Test DataLoader
     _, _, test_loader = create_dataloaders(clean_data_path=CLEAN_DATASET_PATH, batch_size=32)
@@ -52,7 +52,7 @@ def run_evaluation():
     model.load_state_dict(checkpoint['state_dict'])
     
     labels, preds = evaluate_model(model, test_loader, device)
-    logger.info("Model evaluation completed")
+    
     return labels, preds
 
 

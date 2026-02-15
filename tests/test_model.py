@@ -6,8 +6,6 @@ from src import DynamicCNN
 
 
 # _________Fixtures_________
-
-
 @pytest.fixture
 def model():
     return DynamicCNN(

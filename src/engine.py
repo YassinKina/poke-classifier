@@ -7,10 +7,8 @@ import optuna
 from torch.utils.data import DataLoader
 import numpy as np
 from typing import Tuple, Optional, Any
-from .utils import ( NestedProgressBar,
-                    get_best_val_accuracy, 
-                    get_num_correct_in_top5, 
-                    MODEL_PATH)
+from .utils import NestedProgressBar, get_best_val_accuracy, get_num_correct_in_top5
+from .paths import MODEL_PATH
 
 
 def train_epoch(model: torch.nn.Module, 

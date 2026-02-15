@@ -9,15 +9,15 @@ import os
 import wandb
 from typing import Tuple, Any, Optional
 from omegaconf import DictConfig, OmegaConf
-from torchview import draw_graph
-from src import DynamicCNN
+from .model import DynamicCNN 
+
 
 POKEMON_MEAN = torch.tensor([0.5863186717033386, 0.5674829483032227, 0.5336665511131287])
 POKEMON_STD = torch.tensor([0.34640103578567505, 0.33123084902763367, 0.34212544560432434])
 
 # Get the project root directory (parent of src/)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+# Paths uses throughout entire project for consistency
 CLEAN_DATASET_PATH = os.path.join(PROJECT_ROOT, "data", "pokemon_clean")
 DATASET_PATH = os.path.join(PROJECT_ROOT, "data", "fcakyon___pokemon-classification")
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")

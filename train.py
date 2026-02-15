@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
 import os
-from src import create_dataloaders
-from src import DynamicCNN
-from src import train_model, init_wandb_run
-from src import set_seed, create_data_dir
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from hydra.utils import get_original_cwd
+from src.data_setup import create_dataloaders, create_data_dir
+from src.model import DynamicCNN
+from src.engine import train_model
+from src.utils import set_seed, init_wandb_run
 
 @hydra.main(version_base=None, config_path="config", config_name="config")
 def main(cfg: DictConfig):
@@ -26,9 +26,7 @@ def main(cfg: DictConfig):
     Returns:
         None
     """
-   
-    
-    # Set random seed for reproducability 
+    # Set random seed for reproducibility 
     set_seed()
     
     # Get the project root, ensuring paths are absolute
