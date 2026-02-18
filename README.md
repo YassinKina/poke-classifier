@@ -97,7 +97,7 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 
 - **Regularization:** Adaptive Dropout rates and Label Smoothing are explored automatically.
 - **Early Stopping:** `MedianPruner` terminates underperforming trials early to save compute resources.
-- **Saved Optimal Hyperparameters:** After 50 Optuna trials, the best hyperparameters are saved in `config/config.yaml` for direct use or further fine-tuning.
+- **Saved Optimal Hyperparameters:** After 20 Optuna trials, the best hyperparameters are saved in `config/config.yaml` for direct use or further fine-tuning.
 
 ### 3. Professional Experiment Tracking
 
@@ -137,13 +137,17 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 
 ### 1. Installation
 
-`pip install -r requirements.txt`
+```bash
+  pip install -r requirements.txt
+```
 
 ### 2. Run Hyperparameter Optimization
 
-`python hpo.py`
+```bash
+python hpo.py
+```
 
-Launches a new hyperparameter optimization study with 20 Bayesian search trials by default (configurable in `config/config.yaml`). The dataset is automatically downloaded if not already present.
+Launches a new hyperparameter optimization study with 20 Bayesian search trials by default (configurable in `config/config.yaml`). The [fcakyon/pokemon-classification](https://huggingface.co/datasets/fcakyon/pokemon-classification) dataset is automatically downloaded if not already present.
 
 ### 3. Train Model with Optimal Hyperparameters
 
@@ -152,25 +156,35 @@ You can either:
 **Option A**: Update the config file
 
 - Modify `config/config.yaml` with your desired hyperparameters.
-- Then run `python train.py`
+- Begin model training
+
+```bash
+python train.py
+```
 
 **Option B**: Override via CLI (Hydra)
 
 - Hydra allows you to override configuration parameters directly from the command line. CLI arguments take precedence over values defined in `config/config.yaml`.
-- For example, to change the `batch_size`, `lr`, and `n_layers` hyperparameters, run:
-  `python train.py training.batch_size=32 training.lr=0.001 model.n_layers=2`
+- For example, to change the `batch_size`, `lr`, and `n_layers`, run:
+  ```bash
+  python train.py training.batch_size=32 training.lr=0.001 model.n_layers=2
+  ```
 
 * This will run training using the overridden values while keeping all other configuration settings unchanged.
 
 ### 4. Run Final Evaluation
 
-`python eval.py`
+```bash
+python eval.py
+```
 
 Load the best weights from the `models/` directory and evaluate on the hold-out test set:
 
 ### 5. Single Image Inference
 
-`python predict.py`
+```bash
+python predict.py
+```
 
 When prompted, enter the filename of any image located in `samples/` (e.g., `golbat.png`).
 The model will output the predicted class directly in the terminal.
