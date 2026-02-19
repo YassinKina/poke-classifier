@@ -2,6 +2,11 @@
 
 A high-performance deep learning pipeline designed to classify 150 Pokémon species. This project implements a custom **DynamicCNN** architecture that can adapt its layer configuration during training, enabling automated architectural search combined with a **Hyperparameter Optimization** (HPO) workflow.
 
+### Live Demo
+
+<a href="https://poke-classifier-pytorch.streamlit.app/" target="_blank" rel="noopener noreferrer">Check out the interactive web app here!</a> Upload your own Pokémon image or choose from a sample gallery to see the model's Top-5 predictions in real-time.
+
+
 ### The Problem
 
 Classifying 150 Pokémon species from a dataset with high class imbalance. Over 50% of classes in the training set have very few or no examples in test/validation splits, meaning we would be unable to accurately assess the model's performance.
@@ -27,11 +32,7 @@ _Note: Due to high class imbalance and very low support in some classes, the Mac
 
 ---
 
-### Live Demo
 
-<a href="https://poke-classifier-pytorch.streamlit.app/" target="_blank" rel="noopener noreferrer">Check out the interactive web app here!</a>
-
-_Upload your own Pokémon image or choose from a sample gallery to see the model's Top-5 predictions in real-time._
 
 ### Model Architecture
 
