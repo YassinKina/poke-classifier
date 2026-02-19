@@ -97,9 +97,9 @@ Leveraging **Optuna** and **Hydra**, the training pipeline explores a multi-dime
 
 - **Regularization:** Adaptive Dropout rates and Label Smoothing are explored automatically.
 - **Early Stopping:** `MedianPruner` terminates underperforming trials early to save compute resources.
-- **Saved Optimal Hyperparameters:** After 20 Optuna trials, the best hyperparameters are saved in `config/config.yaml` for direct use or further fine-tuning.
+- **Saved Optimal Hyperparameters:** After 20 Optuna trials, the best hyperparameters are saved in `outputs/.hydra/config.yaml` for direct use or further fine-tuning.
 
-### 3. Professional Experiment Tracking
+### 3. Experiment Tracking
 
 - **Weights & Biases (W&B):** Real-time logging of training/validation loss, Top-1/Top-5 accuracy, and gradient distributions for reproducible experiments.
 - **Hydra:** Version-controlled configuration management for reproducible experiments.
